@@ -6,7 +6,8 @@ enabled = true
 
   [analyzers.meta]
   dockerfile_paths = [
-    "Dockerfile",
+    "bot/Dockerfile",
+    "api/Dockerfile",
     "docker-compose.yml"
   ]
 

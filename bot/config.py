@@ -7,6 +7,8 @@ _REQUIRED_FIELDS = [
     "TELEGRAM_API_ID",
     "TELEGRAM_API_HASH",
     "TELEGRAM_BOT_TOKEN",
+    "VPRW_API_KEY",
+    "VPRW_API_ENDPOINT",
 ]
 
 
@@ -43,3 +45,9 @@ class Config:
 
     def get_telegram_bot_token(self) -> str:
         return self.__get_env_var("TELEGRAM_BOT_TOKEN")
+
+    def get_vprw_api_key(self) -> str:
+        return self.__get_env_var("VPRW_API_KEY")
+
+    def get_vprw_api_endpoint(self) -> str:
+        return self.__get_env_var("VPRW_API_ENDPOINT")

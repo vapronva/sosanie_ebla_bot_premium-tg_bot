@@ -1,11 +1,10 @@
 from pyrogram import Client
 from pyrogram.types import (
-    InlineQueryResultArticle,
-    InputTextMessageContent,
     InlineQueryResultVoice,
 )
 from config import Config
 import logging
+import uuid
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,13 +25,18 @@ bot = Client(
 
 @bot.on_inline_query()
 def answer_inline_query(_, inline_query):
-    inline_query.answer(
+    REQUEST_UUID = str(uuid.uuid4())
+    if inline_query.query == "start":
+        inline_query.answer(
         results=[
-            InlineQueryResultArticle(
-                title="Test",
-                input_message_content=InputTextMessageContent("Test"),
-            )
-        ]
+            InlineQueryResultVoice(
+                voice_url=f"https://api.sosanie-ebla-bot-premium.vapronva.pw/voice/{REQUEST_UUID}",
+                title="Ttle 2",
+                id=REQUEST_UUID,
+                caption="Caption 2",
+            ),
+        ],
+        cache_time=1,
     )
 
 
