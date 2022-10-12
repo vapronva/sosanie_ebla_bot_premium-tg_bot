@@ -5,7 +5,6 @@ from pyrogram.types import (
 )
 from config import Config
 import logging
-import uuid
 import requests
 
 logging.basicConfig(

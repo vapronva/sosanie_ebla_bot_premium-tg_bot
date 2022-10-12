@@ -8,6 +8,7 @@ class DB:
         self.__client = pymongo.MongoClient(uri)
         self.__db = self.__client["sebp"]
         self.__cll = self.__db["content"]
+        self.__ull = self.__db["allowed"]
 
     def create_user_content(
         self,
@@ -22,3 +23,6 @@ class DB:
 
     def get_request(self, requestID: str) -> dict:
         return self.__cll.find_one({"requestID": requestID})
+
+    def get_user_allowed(self, user_id: int) -> bool:
+        return self.__ull.find_one({"user_id": user_id, "allowed": True}) is not None

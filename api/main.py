@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from models import (
     DefaultResponseModel,
-    DefaultResultModel,
     DefaultErrorModel,
     UserAllowanceResultModel,
     UserAllowedModel,
@@ -76,12 +75,15 @@ def is_user_allowed(request: Request, user_id: int):
             ),
             result=None,
         )
+    USER_ALLOWANCE = False
+    if DB.get_user_allowed(user_id):
+        USER_ALLOWANCE = True
     return DefaultResponseModel(
         error=None,
         result=UserAllowanceResultModel(
             requestID=str(uuid.uuid4()),
             cacheTime=10,
-            data=UserAllowedModel(allowed=True),
+            data=UserAllowedModel(allowed=USER_ALLOWANCE),
         ),
     )
 
@@ -121,9 +123,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             404,
         )
     selectedVoice = VoiceMessageTTSInlineModel(**selectedVoice)
-    outputFile = Path(
-        f"./voice_messages_storage/{request_id.replace('-', '_')}-{voice_id.replace('-','_')}.wav"
-    )
+    outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
     if selectedVoice.additionalData.company == "tinkoff":
         tinkoff_tts(
             text=userRequest.get("content"),
@@ -132,7 +132,17 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ),
             output_file=outputFile,
         )
-    return FileResponse(outputFile)
+        return FileResponse(outputFile)
+    return (
+        DefaultResponseModel(
+            error=DefaultErrorModel(
+                name="VOICE_PROVIDER_NOT_FOUND",
+                description="No such voice provider found in available TTS models",
+            ),
+            result=None,
+        ),
+        404,
+    )
 
 
 @app.post("/tts/request", response_model=DefaultResponseModel)

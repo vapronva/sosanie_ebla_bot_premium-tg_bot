@@ -5,3 +5,4 @@ httpx[http2]==0.23.0
 fastapi==0.85.0
 uvicorn==0.18.3
 pymongo==4.2.0
+uuid==1.30
