@@ -7,6 +7,7 @@ _REQUIRED_FIELDS = [
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
     "API_CONTACT_EMAIL",
+    "DB_MONGODB_URI",
 ]
 
 
@@ -43,3 +44,6 @@ class Config:
 
     def get_api_contact_email(self) -> str:
         return self.__get_env_var("API_CONTACT_EMAIL")
+
+    def get_db_mongodb_uri(self) -> str:
+        return self.__get_env_var("DB_MONGODB_URI")

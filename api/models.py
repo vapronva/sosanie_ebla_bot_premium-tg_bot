@@ -16,13 +16,15 @@ class DefaultResultModel(BaseModel):
 class AdditionalDataModel(BaseModel):
     speakerLang: str
     speakerName: str
-    speakerEmotion: str
+    speakerEmotion: Optional[str]
+    company: str
 
 
 class VoiceMessageTTSInlineModel(BaseModel):
     url: HttpUrl
     title: str
     caption: Optional[str]
+    voice_id: str
     additionalData: Optional[AdditionalDataModel]
 
 
@@ -46,3 +48,8 @@ class UserAllowedModel(BaseModel):
 
 class UserAllowanceResultModel(DefaultResultModel):
     data: UserAllowedModel
+
+
+class TTSRequestBodyModel(BaseModel):
+    user_id: int
+    query: str
