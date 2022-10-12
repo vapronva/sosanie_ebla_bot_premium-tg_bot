@@ -6,9 +6,9 @@ import os
 import wave
 from pathlib import Path
 
-_VKC_API_ENDPOINT = os.environ.get("VOICEKIT_ENDPOINT") or "api.tinkoff.ai:443"
-_VCK_API_KEY = os.environ["VOICEKIT_API_KEY"]
-_VCK_SECRET_KEY = os.environ["VOICEKIT_SECRET_KEY"]
+_VKC_API_ENDPOINT = os.environ.get("TINKOFF_VOICEKIT_ENDPOINTAPI")
+_VCK_API_KEY = os.environ["TINKOFF_VOICEKIT_APIKEY"]
+_VCK_SECRET_KEY = os.environ["TINKOFF_VOICEKIT_SECRETKEY"]
 
 SAMPLE_RATE = 48000
 
