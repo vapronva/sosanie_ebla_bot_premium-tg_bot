@@ -1,9 +1,9 @@
 import os
 
 _REQUIRED_FIELDS = [
-    "TELEGRAM_API_ID",
-    "TELEGRAM_API_HASH",
-    "TELEGRAM_BOT_TOKEN",
+    "TINKOFF_VOICEKIT_APIKEY",
+    "TINKOFF_VOICEKIT_SECRETKEY",
+    "TINKOFF_VOICEKIT_ENDPOINTAPI",
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
 ]
@@ -25,14 +25,14 @@ class Config:
             raise ValueError(f"Environment variable {name} is not set")
         return os.environ[name]
 
-    def get_telegram_api_id(self) -> str:
-        return self.__get_env_var("TELEGRAM_API_ID")
+    def get_tinkoff_voicekit_apikey(self) -> str:
+        return self.__get_env_var("TINKOFF_VOICEKIT_APIKEY")
 
-    def get_telegram_api_hash(self) -> str:
-        return self.__get_env_var("TELEGRAM_API_HASH")
+    def get_tinkoff_voicekit_secretkey(self) -> str:
+        return self.__get_env_var("TINKOFF_VOICEKIT_SECRETKEY")
 
-    def get_telegram_bot_token(self) -> str:
-        return self.__get_env_var("TELEGRAM_BOT_TOKEN")
+    def get_tinkoff_voicekit_endpointapi(self) -> str:
+        return self.__get_env_var("TINKOFF_VOICEKIT_ENDPOINTAPI")
 
     def get_vprw_api_key(self) -> str:
         return self.__get_env_var("VPRW_API_KEY")
