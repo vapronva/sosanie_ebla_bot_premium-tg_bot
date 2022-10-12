@@ -33,3 +33,16 @@ class VoiceMessagesTTSResultModel(DefaultResultModel):
 class DefaultResponseModel(BaseModel):
     error: Optional[DefaultErrorModel]
     result: Optional[DefaultResultModel]
+
+
+class TTSRequestModel(BaseModel):
+    user_id: int
+    query: str
+
+
+class UserAllowedModel(BaseModel):
+    allowed: bool
+
+
+class UserAllowanceResultModel(DefaultResultModel):
+    data: UserAllowedModel
