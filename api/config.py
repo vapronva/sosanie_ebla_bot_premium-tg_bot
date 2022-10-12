@@ -6,6 +6,7 @@ _REQUIRED_FIELDS = [
     "TINKOFF_VOICEKIT_ENDPOINTAPI",
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
+    "API_CONTACT_EMAIL",
 ]
 
 
@@ -39,3 +40,6 @@ class Config:
 
     def get_vprw_api_endpoint(self) -> str:
         return self.__get_env_var("VPRW_API_ENDPOINT")
+
+    def get_api_contact_email(self) -> str:
+        return self.__get_env_var("API_CONTACT_EMAIL")

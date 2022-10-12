@@ -1,10 +1,12 @@
 from pyrogram import Client
 from pyrogram.types import (
     InlineQueryResultVoice,
+    InlineQueryResultArticle,
 )
 from config import Config
 import logging
 import uuid
+import requests
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,18 +27,48 @@ bot = Client(
 
 @bot.on_inline_query()
 def answer_inline_query(_, inline_query):
-    REQUEST_UUID = str(uuid.uuid4())
-    if inline_query.query == "start":
+    USER_ID = inline_query.from_user.id
+    try:
+        IS_ALLOWED = requests.get(
+            "https://{CONFIG.get_vprw_api_endpoint}/allowed",
+            params={"user_id": USER_ID},
+            headers={"X-API-Token": CONFIG.get_vprw_api_key()},
+        ).json()["result"]["data"]["allowed"]
+    except Exception as e:
+        logging.error(e)
+        IS_ALLOWED = False
+    logging.info(f"User {USER_ID} is allowed to perform TTS: {IS_ALLOWED}")
+    if IS_ALLOWED:
+        REQUEST_UUID = str(uuid.uuid4())
+        QUERY_TEXT = inline_query.query
+        response = requests.post(
+            url=f"https://{CONFIG.get_vprw_api_endpoint}/tts/request",
+            json={"user_id": USER_ID, "query": QUERY_TEXT},
+            headers={"X-API-Token": CONFIG.get_vprw_api_key()},
+        ).json()
+        logging.info(f"User {USER_ID} requested TTS for query {QUERY_TEXT}")
+        RESULTING_VOICE_MESSAGES = []
+        for ttsv in response["result"]["data"]:
+            RESULTING_VOICE_MESSAGES.append(
+                InlineQueryResultVoice(
+                    title=ttsv["title"],
+                    voice_url=ttsv["url"],
+                    caption=ttsv["caption"],
+                )
+            )
         inline_query.answer(
+            results=RESULTING_VOICE_MESSAGES,
+            cache_time=response["result"]["cacheTime"],
+        )
+    inline_query.answer(
         results=[
-            InlineQueryResultVoice(
-                voice_url=f"https://api.sosanie-ebla-bot-premium.vapronva.pw/voice/{REQUEST_UUID}",
-                title="Ttle 2",
-                id=REQUEST_UUID,
-                caption="Caption 2",
-            ),
+            InlineQueryResultArticle(
+                title="Access Denied",
+                description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
+                input_message_content="<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
+            )
         ],
-        cache_time=1,
+        cache_time=5,
     )
 
 

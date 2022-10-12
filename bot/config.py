@@ -6,6 +6,7 @@ _REQUIRED_FIELDS = [
     "TELEGRAM_BOT_TOKEN",
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
+    "BOT_CONTACT_USERNAME",
 ]
 
 
@@ -39,3 +40,6 @@ class Config:
 
     def get_vprw_api_endpoint(self) -> str:
         return self.__get_env_var("VPRW_API_ENDPOINT")
+
+    def get_bot_contact_username(self) -> str:
+        return self.__get_env_var("BOT_CONTACT_USERNAME")
