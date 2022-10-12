@@ -37,16 +37,14 @@ def answer_inline_query(_, inline_query):
     except Exception as e:
         logging.error(e)
         IS_ALLOWED = False
-    logging.info(f"User {USER_ID} is allowed to perform TTS: {IS_ALLOWED}")
+    logging.info("User %s is allowed to perform TTS: %s", USER_ID, IS_ALLOWED)
     if IS_ALLOWED:
-        REQUEST_UUID = str(uuid.uuid4())
         QUERY_TEXT = inline_query.query
         response = requests.post(
             url=f"https://{CONFIG.get_vprw_api_endpoint}/tts/request",
             json={"user_id": USER_ID, "query": QUERY_TEXT},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()
-        logging.info(f"User {USER_ID} requested TTS for query {QUERY_TEXT}")
         RESULTING_VOICE_MESSAGES = []
         for ttsv in response["result"]["data"]:
             RESULTING_VOICE_MESSAGES.append(
@@ -59,6 +57,11 @@ def answer_inline_query(_, inline_query):
         inline_query.answer(
             results=RESULTING_VOICE_MESSAGES,
             cache_time=response["result"]["cacheTime"],
+        )
+        logging.info(
+            "Answered inline query with %s results for %s",
+            len(RESULTING_VOICE_MESSAGES),
+            USER_ID,
         )
     inline_query.answer(
         results=[
