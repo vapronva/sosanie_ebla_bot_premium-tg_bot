@@ -1,0 +1,56 @@
+# boapdb-sosaeblabotprem-vapronva
+version: "3"
+
+services:
+  db:
+    image: mongo:5.0-focal
+    restart: unless-stopped
+    user: "1047"
+    container_name: "database-sosania_ebla_bot_premium-vapronva-mongodb"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "vprw"
+      MONGO_INITDB_ROOT_PASSWORD: "ScZ325XFhyqc5nfRD2CxFYNJ487w92"
+      MONGO_INITDB_DATABASE: "sebp"
+    volumes:
+      - ${DB_PATH_VOLUME}:/data/db
+    ports:
+      - 27122:27017
+  api:
+    image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/api:latest
+    restart: unless-stopped
+    user: "1047"
+    container_name: "api-sosania_ebla_bot_premium-vapronva-main"
+    environment:
+      TINKOFF_VOICEKIT_APIKEY: ${TINKOFF_VOICEKIT_APIKEY}
+      TINKOFF_VOICEKIT_SECRETKEY: ${TINKOFF_VOICEKIT_SECRETKEY}
+      TINKOFF_VOICEKIT_ENDPOINTAPI: ${TINKOFF_VOICEKIT_ENDPOINTAPI}
+      VPRW_API_KEY: ${VPRW_API_KEY}
+      VPRW_API_SECRET: ${VPRW_API_SECRET}
+      VPRW_API_ENDPOINT: ${VPRW_API_ENDPOINT}
+      API_CONTACT_EMAIL: ${API_CONTACT_EMAIL}
+      DB_MONGODB_URI: ${DB_MONGODB_URI}
+      VIRTUAL_PORT: 8000
+      VIRTUAL_HOST: ${VPRW_API_ENDPOINT}
+  bot:
+    image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/api:latest
+    restart: unless-stopped
+    user: "1047"
+    container_name: "worker-sosania_ebla_bot_premium-vapronva-bot"
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      VPRW_API_KEY: ${VPRW_API_KEY}
+      VPRW_API_SECRET: ${VPRW_API_SECRET}
+      VPRW_API_ENDPOINT: ${VPRW_API_ENDPOINT}
+      BOT_CONTACT_USERNAME: ${BOT_CONTACT_USERNAME}
+
+networks:
+  default:
+    driver: bridge
+    name: "boapdb-sosaeblabotprem-vapronva-network"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.67.0/24
+          gateway: 172.16.67.1

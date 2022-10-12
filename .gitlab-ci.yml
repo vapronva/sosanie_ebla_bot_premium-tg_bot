@@ -2,6 +2,7 @@ stages:
   - test
   - build-image
   - post-test
+  - deploy
 
 sast:
   stage: test
@@ -58,3 +59,15 @@ container_scanning:
     CS_DISABLE_LANGUAGE_VULNERABILITY_SCAN: "false"
     CS_ANALYZER_IMAGE: "registry.gitlab.com/security-products/container-scanning/grype:5"
     SECURE_LOG_LEVEL: "debug"
+
+deploy-job:
+  stage: deploy
+  before_script:
+    - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASSWORD" $REGISTRY
+  script:
+    - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' down
+    - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' up -d
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - docker-compose.yml
