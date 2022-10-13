@@ -2,6 +2,7 @@ from pyrogram import Client
 from pyrogram.types import (
     InlineQueryResultVoice,
     InlineQueryResultArticle,
+    InputTextMessageContent,
 )
 from config import Config
 import logging
@@ -32,8 +33,10 @@ def answer_inline_query(_, inline_query):
                 InlineQueryResultArticle(
                     title="Sosanie Ebla Bot Premium",
                     description="введите текст для озвучивания",
-                    input_message_content=f"<b>sosania ebla bot premium</b>\n\n<i></i>",
-                )
+                    input_message_content=InputTextMessageContent(
+                        f"<b>sosania ebla bot premium</b>\n\n<i>Semi-public text-to-speech bot aimed to provide new level of comfort to its users at creating incredible and funny voice messages with high-quality TTS voices.</i>"
+                    ),
+                ),
             ],
             cache_time=5,
         )
@@ -55,8 +58,10 @@ def answer_inline_query(_, inline_query):
                 InlineQueryResultArticle(
                     title="Access Denied",
                     description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
-                    input_message_content=f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
-                )
+                    input_message_content=InputTextMessageContent(
+                        f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access."
+                    ),
+                ),
             ],
             cache_time=5,
         )
@@ -74,7 +79,7 @@ def answer_inline_query(_, inline_query):
                 title=ttsv["title"],
                 voice_url=ttsv["url"],
                 caption=ttsv["caption"],
-            )
+            ),
         )
     inline_query.answer(
         results=RESULTING_VOICE_MESSAGES,

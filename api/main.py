@@ -135,7 +135,9 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
         )
         ffmpy.FFmpeg(
             inputs={str(outputFile): None},
-            outputs={f"./voice_messages_storage/{voice_id}.ogg": "-acodec libvorbis"},
+            outputs={
+                f"./voice_messages_storage/{voice_id}.ogg": "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
+            },
         ).run()
         return FileResponse(outputFile.with_suffix(".ogg"))
     return (
