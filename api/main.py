@@ -113,7 +113,7 @@ def is_user_allowed(request: Request, user_id: int):
             ),
         )
     USER_ALLOWANCE = False
-    if DB.get_user_allowed(user_id):
+    if DB.get_user_allowed(int(user_id)):
         USER_ALLOWANCE = True
     return DefaultResponseModel(
         error=None,
@@ -267,7 +267,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
     response_model=DefaultResponseModel,
     status_code=status.HTTP_200_OK,
 )
-def change_user_allowance(request: Request, user_id: str, allowed_status: bool):
+def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
     if not check_proper_headers(request):
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_403_FORBIDDEN,
@@ -280,7 +280,7 @@ def change_user_allowance(request: Request, user_id: str, allowed_status: bool):
             ),
         )
     try:
-        DB.set_user_allowance(user_id, allowed_status)
+        DB.set_user_allowance(int(user_id), allowed_status)
     except Exception as e:
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -293,7 +293,7 @@ def change_user_allowance(request: Request, user_id: str, allowed_status: bool):
             ),
         )
     USER_ALLOWANCE = False
-    if DB.get_user_allowed(user_id):
+    if DB.get_user_allowed(int(user_id)):
         USER_ALLOWANCE = True
     return DefaultResponseModel(
         error=None,
