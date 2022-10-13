@@ -2,7 +2,7 @@ FROM python:3.10-alpine
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache ffmpeg=~5.1.2
+RUN apk add --no-cache ffmpeg=5.1.2-r1
 
 COPY requirements.txt ./
 
