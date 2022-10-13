@@ -7,3 +7,4 @@ uvicorn==0.18.3
 pymongo==4.2.0
 uuid==1.30
 grpcio==1.49.1
+ffmpy==0.3.0

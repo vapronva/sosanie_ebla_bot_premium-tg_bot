@@ -31,6 +31,8 @@ services:
       DB_MONGODB_URI: ${DB_MONGODB_URI}
       VIRTUAL_PORT: 8000
       VIRTUAL_HOST: ${VPRW_API_ENDPOINT}
+    volumes:
+      - ${VOICEMESSAGES_PATH_VOLUME}:/usr/src/app/voice_messages_storage
   bot:
     image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/bot:latest
     restart: unless-stopped

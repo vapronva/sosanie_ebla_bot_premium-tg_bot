@@ -18,6 +18,7 @@ from config import Config
 import logging
 import uuid
 from db import DB
+import ffmpy
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -132,7 +133,11 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ),
             output_file=outputFile,
         )
-        return FileResponse(outputFile)
+        ffmpy.FFmpeg(
+            inputs={str(outputFile): None},
+            outputs={f"./voice_messages_storage/{voice_id}.ogg": "-acodec libvorbis"},
+        ).run()
+        return FileResponse(outputFile.with_suffix(".ogg"))
     return (
         DefaultResponseModel(
             error=DefaultErrorModel(

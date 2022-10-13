@@ -26,6 +26,18 @@ bot = Client(
 
 @bot.on_inline_query()
 def answer_inline_query(_, inline_query):
+    if inline_query.query == "":
+        inline_query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="Sosanie Ebla Bot Premium",
+                    description="введите текст для озвучивания",
+                    input_message_content=f"<b>sosania ebla bot premium</b>\n\n<i></i>",
+                )
+            ],
+            cache_time=5,
+        )
+        return
     USER_ID = inline_query.from_user.id
     try:
         IS_ALLOWED = requests.get(
@@ -37,44 +49,42 @@ def answer_inline_query(_, inline_query):
         logging.error(e)
         IS_ALLOWED = False
     logging.info("User %s is allowed to perform TTS: %s", USER_ID, IS_ALLOWED)
-    if IS_ALLOWED:
-        QUERY_TEXT = inline_query.query
-        response = requests.post(
-            url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/request",
-            json={"user_id": USER_ID, "query": QUERY_TEXT},
-            headers={"X-API-Token": CONFIG.get_vprw_api_key()},
-        ).json()
-        RESULTING_VOICE_MESSAGES = []
-        for ttsv in response["result"]["data"]:
-            RESULTING_VOICE_MESSAGES.append(
-                InlineQueryResultVoice(
-                    title=ttsv["title"],
-                    voice_url=ttsv["url"],
-                    caption=ttsv["caption"],
-                )
-            )
+    if IS_ALLOWED is False:
         inline_query.answer(
-            results=RESULTING_VOICE_MESSAGES,
-            cache_time=response["result"]["cacheTime"],
+            results=[
+                InlineQueryResultArticle(
+                    title="Access Denied",
+                    description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
+                    input_message_content=f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
+                )
+            ],
+            cache_time=5,
         )
-        logging.info(
-            "Answered inline query with %s results for %s",
-            len(RESULTING_VOICE_MESSAGES),
-            USER_ID,
+        return
+    QUERY_TEXT = inline_query.query
+    response = requests.post(
+        url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/request",
+        json={"user_id": USER_ID, "query": QUERY_TEXT},
+        headers={"X-API-Token": CONFIG.get_vprw_api_key()},
+    ).json()
+    RESULTING_VOICE_MESSAGES = []
+    for ttsv in response["result"]["data"]:
+        RESULTING_VOICE_MESSAGES.append(
+            InlineQueryResultVoice(
+                title=ttsv["title"],
+                voice_url=ttsv["url"],
+                caption=ttsv["caption"],
+            )
         )
     inline_query.answer(
-        results=[
-            InlineQueryResultArticle(
-                title="Access Denied",
-                description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
-                input_message_content=f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
-            )
-        ],
-        cache_time=5,
+        results=RESULTING_VOICE_MESSAGES,
+        cache_time=response["result"]["cacheTime"],
+    )
+    logging.info(
+        "Answered inline query with %s results for %s",
+        len(RESULTING_VOICE_MESSAGES),
+        USER_ID,
     )
 
 
-try:
-    bot.run()
-except KeyboardInterrupt:
-    bot.stop()
+bot.run()
