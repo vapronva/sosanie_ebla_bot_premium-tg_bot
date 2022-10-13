@@ -73,12 +73,12 @@ deploy-job:
     - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' up -d
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
-      exists:
-      - docker-compose.yml
-      changes:
-      - docker-compose.yml
-      - api/Dockerfile
-      - bot/Dockerfile
-      - .gitlab-ci.yml
-      - "**/*.py"
-      - "**/*.txt"
+    exists:
+    - docker-compose.yml
+    changes:
+    - docker-compose.yml
+    - api/Dockerfile
+    - bot/Dockerfile
+    - .gitlab-ci.yml
+    - "**/*.py"
+    - "**/*.txt"
