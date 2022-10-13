@@ -29,7 +29,7 @@ def answer_inline_query(_, inline_query):
     USER_ID = inline_query.from_user.id
     try:
         IS_ALLOWED = requests.get(
-            "https://{CONFIG.get_vprw_api_endpoint}/allowed",
+            f"https://{CONFIG.get_vprw_api_endpoint()}/allowed",
             params={"user_id": USER_ID},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()["result"]["data"]["allowed"]
@@ -40,7 +40,7 @@ def answer_inline_query(_, inline_query):
     if IS_ALLOWED:
         QUERY_TEXT = inline_query.query
         response = requests.post(
-            url=f"https://{CONFIG.get_vprw_api_endpoint}/tts/request",
+            url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/request",
             json={"user_id": USER_ID, "query": QUERY_TEXT},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()
@@ -67,7 +67,7 @@ def answer_inline_query(_, inline_query):
             InlineQueryResultArticle(
                 title="Access Denied",
                 description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
-                input_message_content="<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
+                input_message_content=f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access.",
             )
         ],
         cache_time=5,
