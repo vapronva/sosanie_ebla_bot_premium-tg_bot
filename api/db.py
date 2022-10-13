@@ -26,3 +26,8 @@ class DB:
 
     def get_user_allowed(self, user_id: int) -> bool:
         return self.__ull.find_one({"user_id": user_id, "allowed": True}) is not None
+
+    def set_user_allowance(self, user_id: int, allowed: bool) -> None:
+        self.__ull.update_one(
+            {"user_id": user_id}, {"$set": {"allowed": allowed}}, upsert=True
+        )

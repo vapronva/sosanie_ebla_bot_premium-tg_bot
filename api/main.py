@@ -260,3 +260,46 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
             data=ttsMessages,
         ),
     )
+
+
+@app.options(
+    "/allowed",
+    response_model=DefaultResponseModel,
+    status_code=status.HTTP_200_OK,
+)
+def change_user_allowance(request: Request, user_id: str, allowed_status: bool):
+    if not check_proper_headers(request):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+        )
+    try:
+        DB.set_user_allowance(user_id, allowed_status)
+    except Exception as e:
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="DB_UPDATE_ERROR",
+                    description="An error occurred while updating user's allowance status",
+                ),
+                result=None,
+            ),
+        )
+    USER_ALLOWANCE = False
+    if DB.get_user_allowed(user_id):
+        USER_ALLOWANCE = True
+    return DefaultResponseModel(
+        error=None,
+        result=UserAllowanceResultModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=60,
+            data=UserAllowedModel(allowed=USER_ALLOWANCE),
+        ),
+    )
