@@ -13,8 +13,6 @@ services:
       MONGO_INITDB_DATABASE: ${DB_MONGODB_DATABASE}
     volumes:
       - ${DB_PATH_VOLUME}:/data/db
-    ports:
-      - 27122:27017
   api:
     image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/api:latest
     restart: unless-stopped
