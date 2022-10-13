@@ -6,8 +6,6 @@ COPY requirements.txt ./
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-USER 1027
-
 COPY . .
 
 CMD [ "python", "./main.py" ]

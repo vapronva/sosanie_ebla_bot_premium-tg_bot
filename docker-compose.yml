@@ -34,7 +34,6 @@ services:
   bot:
     image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/bot:latest
     restart: unless-stopped
-    user: "1047"
     container_name: "worker-sosania_ebla_bot_premium-vapronva-bot"
     environment:
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
