@@ -32,7 +32,7 @@ services:
       VIRTUAL_PORT: 8000
       VIRTUAL_HOST: ${VPRW_API_ENDPOINT}
   bot:
-    image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/api:latest
+    image: registry.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/bot:latest
     restart: unless-stopped
     user: "1047"
     container_name: "worker-sosania_ebla_bot_premium-vapronva-bot"
