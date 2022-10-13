@@ -8,9 +8,9 @@ services:
     user: "1047"
     container_name: "database-sosania_ebla_bot_premium-vapronva-mongodb"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: "vprw"
-      MONGO_INITDB_ROOT_PASSWORD: "ScZ325XFhyqc5nfRD2CxFYNJ487w92"
-      MONGO_INITDB_DATABASE: "sebp"
+      MONGO_INITDB_ROOT_USERNAME: ${DB_MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGODB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DB_MONGODB_DATABASE}
     volumes:
       - ${DB_PATH_VOLUME}:/data/db
     ports:
