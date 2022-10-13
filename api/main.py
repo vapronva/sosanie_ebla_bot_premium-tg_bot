@@ -1,8 +1,9 @@
 from pathlib import Path
 from fastapi.responses import FileResponse
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from pydantic import BaseModel
 from starlette.requests import Request
+from starlette.responses import JSONResponse
 from models import (
     DefaultResponseModel,
     DefaultErrorModel,
@@ -80,37 +81,47 @@ def check_proper_user_agent(request: Request) -> bool:
     return True
 
 
-@app.get("/")
+class ErrorCustomBruhher(Exception):
+    def __init__(self, response: DefaultResponseModel, statusCode: int) -> None:
+        self.response = response
+        self.statusCode = statusCode
+
+
+@app.exception_handler(ErrorCustomBruhher)
+def custom_error_bruhher(request: Request, exc: ErrorCustomBruhher) -> JSONResponse:
+    return JSONResponse(status_code=exc.statusCode, content=exc.response.dict())
+
+
+@app.get("/", status_code=status.HTTP_200_OK)
 def read_root():
     return DefaultResponseModel(error=None, result=None)
 
 
-@app.get("/allowed", response_model=DefaultResponseModel)
+@app.get(
+    "/allowed", response_model=DefaultResponseModel, status_code=status.HTTP_200_OK
+)
 def is_user_allowed(request: Request, user_id: int):
     if not check_proper_headers(request):
-        return (
-            DefaultResponseModel(
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
                 error=DefaultErrorModel(
                     name="FORBIDDEN_BALLS",
                     description="You are not authorized to access this resource",
                 ),
                 result=None,
             ),
-            403,
         )
     USER_ALLOWANCE = False
     if DB.get_user_allowed(user_id):
         USER_ALLOWANCE = True
-    return (
-        DefaultResponseModel(
-            error=None,
-            result=UserAllowanceResultModel(
-                requestID=str(uuid.uuid4()),
-                cacheTime=10,
-                data=UserAllowedModel(allowed=USER_ALLOWANCE),
-            ),
+    return DefaultResponseModel(
+        error=None,
+        result=UserAllowanceResultModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=10,
+            data=UserAllowedModel(allowed=USER_ALLOWANCE),
         ),
-        200,
     )
 
 
@@ -120,44 +131,44 @@ def generate_selected_voice_tinkoff(additionalData: AdditionalDataModel) -> str:
     return additionalData.speakerName
 
 
-@app.get("/tts/voice/{request_id}/{voice_id}.ogg")
+@app.get("/tts/voice/{request_id}/{voice_id}.ogg", status_code=status.HTTP_200_OK)
 def voice_message_server(request: Request, request_id: str, voice_id: str):
-    if not check_proper_headers(request):
-        return (
-            DefaultResponseModel(
+    if not check_proper_user_agent(request):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
                 error=DefaultErrorModel(
                     name="FORBIDDEN_NUTS",
                     description="You are not authorized to access this resource",
                 ),
                 result=None,
             ),
-            403,
         )
     userRequest = DB.get_request(request_id)
     if not userRequest:
-        return (
-            DefaultResponseModel(
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
                 error=DefaultErrorModel(
                     name="REQUEST_NOT_FOUND",
                     description="No such request found in database or it has expired",
                 ),
                 result=None,
             ),
-            404,
         )
     selectedVoice = next(
         (x for x in userRequest["tts"] if x["voice_id"] == voice_id), None
     )
     if not selectedVoice:
-        return (
-            DefaultResponseModel(
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
                 error=DefaultErrorModel(
                     name="VOICE_NOT_FOUND",
-                    description="No such voice found in request",
+                    description="No such voice message found in the request",
                 ),
                 result=None,
             ),
-            404,
         )
     selectedVoice = VoiceMessageTTSInlineModel(**selectedVoice)
     outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
@@ -182,38 +193,43 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
         ytts.generate(userRequest.get("content"))
         ytts.writeData(outputFile)
     if not outputFile.exists():
-        return (
-            DefaultResponseModel(
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
                 error=DefaultErrorModel(
                     name="VOICE_PROVIDER_NOT_FOUND",
                     description="No such voice provider found in available TTS models",
                 ),
                 result=None,
             ),
-            404,
         )
     ffmpy.FFmpeg(
+        global_options="-y -loglevel quiet",
         inputs={str(outputFile): None},
         outputs={
             f"./voice_messages_storage/{voice_id}.ogg": "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
         },
     ).run()
-    return FileResponse(outputFile.with_suffix(".ogg")), 200
+    return FileResponse(outputFile.with_suffix(".ogg"))
 
 
-@app.post("/tts/request", response_model=DefaultResponseModel)
+@app.post(
+    "/tts/request",
+    response_model=DefaultResponseModel,
+    status_code=status.HTTP_201_CREATED,
+)
 def request_tts(request: Request, body: TTSRequestBodyModel):
     requestID = str(uuid.uuid4())
     if not check_proper_headers(request):
-        return (
-            DefaultResponseModel(
-                error=BaseModel(
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
                     name="FORBIDDEN_BALLS",
                     description="You are not authorized to access this resource",
                 ),
                 result=None,
             ),
-            403,
         )
     ttsMessages = []
     for voice in AVAILABLE_VOICES:
@@ -236,14 +252,11 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
     DB.create_user_content(
         user_id=body.user_id, content=body.query, requestID=requestID, tts=ttsMessages
     )
-    return (
-        DefaultResponseModel(
-            error=None,
-            result=VoiceMessagesTTSResultModel(
-                requestID=requestID,
-                cacheTime=10,
-                data=ttsMessages,
-            ),
+    return DefaultResponseModel(
+        error=None,
+        result=VoiceMessagesTTSResultModel(
+            requestID=requestID,
+            cacheTime=10,
+            data=ttsMessages,
         ),
-        200,
     )
