@@ -14,6 +14,7 @@ from models import (
     AdditionalDataModel,
 )
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
+from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
 from config import Config
 import logging
 import uuid
@@ -29,9 +30,9 @@ CONFIG = Config()
 DB = DB(CONFIG.get_db_mongodb_uri())
 
 AVAILABLE_VOICES = [
-    ("tinkoff", "ru", "alyona", None, "Алёна (обычный)"),
-    ("tinkoff", "ru", "alyona", "sad", "Алёна (грустный)"),
-    ("tinkoff", "ru", "alyona", "funny", "Алёна (смешной)"),
+    ("tinkoff", "ru", "alyona", None, "Алёна (обычная)"),
+    ("tinkoff", "ru", "alyona", "sad", "Алёна (грустная)"),
+    ("tinkoff", "ru", "alyona", "funny", "Алёна (смешная)"),
     ("tinkoff", "ru", "alyona", "flirt", "Алёна (флирт)"),
     ("tinkoff", "ru", "dorofeev", "neutral", "Дорофеев (нейтральный)"),
     ("tinkoff", "ru", "dorofeev", "drama", "Дорофеев (драматичный)"),
@@ -39,6 +40,24 @@ AVAILABLE_VOICES = [
     ("tinkoff", "ru", "dorofeev", "info", "Дорофеев (новости)"),
     ("tinkoff", "ru", "dorofeev", "tragedy", "Дорофеев (трагедия)"),
     ("tinkoff", "ru", "maxim", None, "Максим (обычный)"),
+    ("yandex", "de", "lea", None, "Леа (обычная)"),
+    ("yandex", "en", "john", None, "Джонн (обычный)"),
+    ("yandex", "kk", "amira", None, "Амира (обычная)"),
+    ("yandex", "kk", "madi", None, "Мади (обычный)"),
+    ("yandex", "ru", "alena", "neutral", "Алёна (нейтральная)"),
+    ("yandex", "ru", "alena", "good", "Алёна (радостная)"),
+    ("yandex", "ru", "filipp", None, "Филипп (обычный)"),
+    ("yandex", "ru", "ermil", "neutral", "Ермил (нейтральный)"),
+    ("yandex", "ru", "ermil", "good", "Ермил (радостный)"),
+    ("yandex", "ru", "jane", "neutral", "Джейн (нейтральная)"),
+    ("yandex", "ru", "jane", "good", "Джейн (радостная)"),
+    ("yandex", "ru", "jane", "evil", "Джейн (раздражённая)"),
+    ("yandex", "ru", "madirus", None, "Мадирус (обычный)"),
+    ("yandex", "ru", "omazh", "neutral", "Омаж (нейтральная)"),
+    ("yandex", "ru", "omazh", "evil", "Омаж (раздражённая)"),
+    ("yandex", "ru", "zahar", "neutral", "Захар (нейтральный)"),
+    ("yandex", "ru", "zahar", "good", "Захар (радостный)"),
+    ("yandex", "uz", "nigora", None, "Нигора (обычная)"),
 ]
 
 app = FastAPI(
@@ -133,6 +152,19 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ),
             output_file=outputFile,
         )
+    elif selectedVoice.additionalData.company == "yandex":
+        ytts = SpeechKitTTS(
+            voice=selectedVoice.additionalData.speakerName,
+            speed=1.0,
+            audioFormat="oggopus",
+            sampleRateHertz=48000,
+            folderId=CONFIG.get_yandex_speechkit_folderid(),
+            emotion=selectedVoice.additionalData.speakerEmotion,
+        )
+        ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
+        ytts.generate(userRequest.get("content"))
+        ytts.writeData(outputFile)
+    try:
         ffmpy.FFmpeg(
             inputs={str(outputFile): None},
             outputs={
@@ -140,16 +172,17 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             },
         ).run()
         return FileResponse(outputFile.with_suffix(".ogg"))
-    return (
-        DefaultResponseModel(
-            error=DefaultErrorModel(
-                name="VOICE_PROVIDER_NOT_FOUND",
-                description="No such voice provider found in available TTS models",
+    except Exception as e:
+        return (
+            DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="VOICE_PROVIDER_NOT_FOUND",
+                    description="No such voice provider found in available TTS models",
+                ),
+                result=None,
             ),
-            result=None,
-        ),
-        404,
-    )
+            404,
+        )
 
 
 @app.post("/tts/request", response_model=DefaultResponseModel)
@@ -165,11 +198,12 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
         )
     ttsMessages = []
     for voice in AVAILABLE_VOICES:
+        company_slug = "T" if voice[0] == "tinkoff" else "Y"
         voice_id = str(uuid.uuid4())
         ttsMessages.append(
             {
                 "url": f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.ogg",
-                "title": f"[{voice[1].upper()}] {voice[4]}",
+                "title": f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
                 "caption": None,
                 "voice_id": voice_id,
                 "additionalData": {

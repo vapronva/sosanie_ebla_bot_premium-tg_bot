@@ -4,6 +4,8 @@ _REQUIRED_FIELDS = [
     "TINKOFF_VOICEKIT_APIKEY",
     "TINKOFF_VOICEKIT_SECRETKEY",
     "TINKOFF_VOICEKIT_ENDPOINTAPI",
+    "YANDEX_SPEECHKIT_FOLDERID",
+    "YANDEX_SPEECHKIT_APITOKEN",
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
     "API_CONTACT_EMAIL",
@@ -35,6 +37,12 @@ class Config:
 
     def get_tinkoff_voicekit_endpointapi(self) -> str:
         return self.__get_env_var("TINKOFF_VOICEKIT_ENDPOINTAPI")
+
+    def get_yandex_speechkit_folderid(self) -> str:
+        return self.__get_env_var("YANDEX_SPEECHKIT_FOLDERID")
+
+    def get_yandex_speechkit_apitoken(self) -> str:
+        return self.__get_env_var("YANDEX_SPEECHKIT_APITOKEN")
 
     def get_vprw_api_key(self) -> str:
         return self.__get_env_var("VPRW_API_KEY")
