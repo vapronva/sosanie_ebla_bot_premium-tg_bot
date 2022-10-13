@@ -62,12 +62,23 @@ container_scanning:
 
 deploy-job:
   stage: deploy
+  image: docker:20-git
+  environment:
+    name: production
+    url: https://api.sosanie-ebla-bot-premium.vapronva.pw
   before_script:
     - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASSWORD" $REGISTRY
   script:
     - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' down
     - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' up -d
   rules:
-    - if: $CI_COMMIT_BRANCH
+  - if: $CI_COMMIT_BRANCH == "main"
       exists:
-        - docker-compose.yml
+      - docker-compose.yml
+      changes:
+      - docker-compose.yml
+      - api/Dockerfile
+      - bot/Dockerfile
+      - .gitlab-ci.yml
+      - "**/*.py"
+      - "**/*.txt"
