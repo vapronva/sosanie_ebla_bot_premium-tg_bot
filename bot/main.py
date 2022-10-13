@@ -34,11 +34,12 @@ def answer_inline_query(_, inline_query):
                     title="Sosanie Ebla Bot Premium",
                     description="введите текст для озвучивания",
                     input_message_content=InputTextMessageContent(
-                        f"<b>sosania ebla bot premium</b>\n\n<i>Semi-public text-to-speech bot aimed to provide new level of comfort to its users at creating incredible and funny voice messages with high-quality TTS voices.</i>"
+                        "<b>Sosanie Ebla Bot Premium</b>\n\n<i>Semi-public text-to-speech bot aimed to provide new level of comfort to its users at creating incredible and funny voice messages with high-quality TTS voices.</i>\n\n<code>;;</code> <a href='https://vprw.ru/sseblopremiumbot-gitlab'>source code</a>\n<code>;;</code> <a href='https://vprw.ru/sseblopremiumbot-authorwebsite'>author</a>\n\n<b>Usage:</b>\n<code>-</code> enter your query\n<code>-</code> select the desired voice, emotion and provider company (<code>[T]</code> — Tinkoff VoiceKit; <code>[Y]</code> — Yandex SpeechKit) with a given language (<code>[RU]</code> — Russian; <code>[DE]</code> — German; <code>[EN]</code> — English (US); <code>[KK]</code> — Kazakh; <code>[UZ]</code> — Uzbek)\n<code>-</code> laugh <i>:)</i>",
                     ),
+                    thumb_url="https://gitlab.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/-/raw/main/_assets/botpic@2x.png",
                 ),
             ],
-            cache_time=5,
+            cache_time=600,
         )
         return
     USER_ID = inline_query.from_user.id
@@ -48,7 +49,7 @@ def answer_inline_query(_, inline_query):
             params={"user_id": USER_ID},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()["result"]["data"]["allowed"]
-    except Exception as e:
+    except Exception as e:  # skipcq: PYL-W0703
         logging.error(e)
         IS_ALLOWED = False
     logging.info("User %s is allowed to perform TTS: %s", USER_ID, IS_ALLOWED)
@@ -57,13 +58,13 @@ def answer_inline_query(_, inline_query):
             results=[
                 InlineQueryResultArticle(
                     title="Access Denied",
-                    description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to get access.",
+                    description=f"You are not allowed to use this bot. Please contact @{CONFIG.get_bot_contact_username()} to request the access.",
                     input_message_content=InputTextMessageContent(
-                        f"<b>Access Denied</b>\n\nYou are <i>not allowed</i> to use this bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to get access."
+                        f"<b>Access Denied to Sosanie Ebla Bot Premium™</b>\n\nYou are <i>not allowed</i> to use the bot.\nPlease contact @{CONFIG.get_bot_contact_username()} to request the access.\nPlease provide your Telegram ID (<code>{inline_query.from_user.id}</code>) in the request and describe your use case.",
                     ),
                 ),
             ],
-            cache_time=5,
+            cache_time=10,
         )
         return
     QUERY_TEXT = inline_query.query

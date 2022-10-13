@@ -75,7 +75,7 @@ def check_proper_headers(request: Request) -> bool:
 
 
 def check_proper_user_agent(request: Request) -> bool:
-    if not "TelegramBot" in request.headers.get("User-Agent"):
+    if "TelegramBot" not in request.headers.get("User-Agent"):
         return False
     return True
 
@@ -88,23 +88,29 @@ def read_root():
 @app.get("/allowed", response_model=DefaultResponseModel)
 def is_user_allowed(request: Request, user_id: int):
     if not check_proper_headers(request):
-        return DefaultResponseModel(
-            error=DefaultErrorModel(
-                name="FORBIDDEN_BALLS",
-                description="You are not authorized to access this resource",
+        return (
+            DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
             ),
-            result=None,
+            403,
         )
     USER_ALLOWANCE = False
     if DB.get_user_allowed(user_id):
         USER_ALLOWANCE = True
-    return DefaultResponseModel(
-        error=None,
-        result=UserAllowanceResultModel(
-            requestID=str(uuid.uuid4()),
-            cacheTime=10,
-            data=UserAllowedModel(allowed=USER_ALLOWANCE),
+    return (
+        DefaultResponseModel(
+            error=None,
+            result=UserAllowanceResultModel(
+                requestID=str(uuid.uuid4()),
+                cacheTime=10,
+                data=UserAllowedModel(allowed=USER_ALLOWANCE),
+            ),
         ),
+        200,
     )
 
 
@@ -116,6 +122,17 @@ def generate_selected_voice_tinkoff(additionalData: AdditionalDataModel) -> str:
 
 @app.get("/tts/voice/{request_id}/{voice_id}.ogg")
 def voice_message_server(request: Request, request_id: str, voice_id: str):
+    if not check_proper_headers(request):
+        return (
+            DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_NUTS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+            403,
+        )
     userRequest = DB.get_request(request_id)
     if not userRequest:
         return (
@@ -164,15 +181,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
         ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
         ytts.generate(userRequest.get("content"))
         ytts.writeData(outputFile)
-    try:
-        ffmpy.FFmpeg(
-            inputs={str(outputFile): None},
-            outputs={
-                f"./voice_messages_storage/{voice_id}.ogg": "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
-            },
-        ).run()
-        return FileResponse(outputFile.with_suffix(".ogg"))
-    except Exception as e:
+    if not outputFile.exists():
         return (
             DefaultResponseModel(
                 error=DefaultErrorModel(
@@ -183,18 +192,28 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ),
             404,
         )
+    ffmpy.FFmpeg(
+        inputs={str(outputFile): None},
+        outputs={
+            f"./voice_messages_storage/{voice_id}.ogg": "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
+        },
+    ).run()
+    return FileResponse(outputFile.with_suffix(".ogg")), 200
 
 
 @app.post("/tts/request", response_model=DefaultResponseModel)
 def request_tts(request: Request, body: TTSRequestBodyModel):
     requestID = str(uuid.uuid4())
     if not check_proper_headers(request):
-        return DefaultResponseModel(
-            error=BaseModel(
-                name="FORBIDDEN_BALLS",
-                description="You are not authorized to access this resource",
+        return (
+            DefaultResponseModel(
+                error=BaseModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
             ),
-            result=None,
+            403,
         )
     ttsMessages = []
     for voice in AVAILABLE_VOICES:
@@ -217,11 +236,14 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
     DB.create_user_content(
         user_id=body.user_id, content=body.query, requestID=requestID, tts=ttsMessages
     )
-    return DefaultResponseModel(
-        error=None,
-        result=VoiceMessagesTTSResultModel(
-            requestID=requestID,
-            cacheTime=10,
-            data=ttsMessages,
+    return (
+        DefaultResponseModel(
+            error=None,
+            result=VoiceMessagesTTSResultModel(
+                requestID=requestID,
+                cacheTime=10,
+                data=ttsMessages,
+            ),
         ),
+        200,
     )
