@@ -173,25 +173,39 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
     selectedVoice = VoiceMessageTTSInlineModel(**selectedVoice)
     outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
     if selectedVoice.additionalData.company == "tinkoff":
-        tinkoff_tts(
-            text=userRequest.get("content"),
-            selected_voice=generate_selected_voice_tinkoff(
-                selectedVoice.additionalData
-            ),
-            output_file=outputFile,
-        )
+        try:
+            tinkoff_tts(
+                text=userRequest.get("content"),
+                selected_voice=generate_selected_voice_tinkoff(
+                    selectedVoice.additionalData
+                ),
+                output_file=outputFile,
+            )
+        except Exception as e:
+            logging.error(e)
+            return FileResponse(
+                Path("./assets/placeholder-vcm/tinkoff-no_response.ogg"),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
     elif selectedVoice.additionalData.company == "yandex":
-        ytts = SpeechKitTTS(
-            voice=selectedVoice.additionalData.speakerName,
-            speed=1.0,
-            audioFormat="oggopus",
-            sampleRateHertz=48000,
-            folderId=CONFIG.get_yandex_speechkit_folderid(),
-            emotion=selectedVoice.additionalData.speakerEmotion,
-        )
-        ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
-        ytts.generate(userRequest.get("content"))
-        ytts.writeData(outputFile)
+        try:
+            ytts = SpeechKitTTS(
+                voice=selectedVoice.additionalData.speakerName,
+                speed=1.0,
+                audioFormat="oggopus",
+                sampleRateHertz=48000,
+                folderId=CONFIG.get_yandex_speechkit_folderid(),
+                emotion=selectedVoice.additionalData.speakerEmotion,
+            )
+            ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
+            ytts.generate(userRequest.get("content"))
+            ytts.writeData(outputFile)
+        except Exception as e:
+            logging.error(e)
+            return FileResponse(
+                Path("./assets/placeholder-vcm/yandex-no_response.ogg"),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
     if not outputFile.exists():
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_404_NOT_FOUND,
