@@ -183,9 +183,15 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             )
         except Exception as e:
             logging.error(e)
-            return FileResponse(
-                Path("./assets/placeholder-vcm/tinkoff-no_response.ogg"),
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            raise ErrorCustomBruhher(
+                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
+                response=DefaultResponseModel(
+                    error=DefaultErrorModel(
+                        name="TINKOFF_TTS_ERROR",
+                        description="Tinkoff TTS service is unavailable at the moment",
+                    ),
+                    result=None,
+                ),
             )
     elif selectedVoice.additionalData.company == "yandex":
         try:
@@ -202,9 +208,15 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ytts.writeData(outputFile)
         except Exception as e:
             logging.error(e)
-            return FileResponse(
-                Path("./assets/placeholder-vcm/yandex-no_response.ogg"),
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            raise ErrorCustomBruhher(
+                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
+                response=DefaultResponseModel(
+                    error=DefaultErrorModel(
+                        name="YANDEX_TTS_ERROR",
+                        description="Yandex TTS service is unavailable at the moment",
+                    ),
+                    result=None,
+                ),
             )
     if not outputFile.exists():
         raise ErrorCustomBruhher(
