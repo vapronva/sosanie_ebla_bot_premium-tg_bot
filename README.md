@@ -2,6 +2,12 @@
 
 > *алёна (флирт) снова в деле, сучки!*
 
+## Copyright / Idea
+
+Original idea by [*@hatkidchan*](https://hatkidchan.is-a.dev/).
+
+I have received a permission from the original author to use the name and the idea.
+
 ## What in the World Is This?
 
 Combining the power of premium text-to-speech models from the likes of [Yandex](https://cloud.yandex.ru/services/speechkit) and [Tinkoff](https://voicekit.tinkoff.ru/) with the power of [Telegram](https://telegram.org/), this bot allows you to send voice messages to your friends and family with the voice of your choice.
