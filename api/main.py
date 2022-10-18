@@ -76,6 +76,7 @@ app = FastAPI(
 
 def check_proper_headers(request: Request) -> bool:
     if request.headers.get("X-API-Token") != CONFIG.get_vprw_api_key():
+        logging.warning("Wrong API key detected in request for %s", request.url)
         return False
     return True
 
@@ -320,6 +321,7 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
                 result=None,
             ),
         )
+    logging.info("Received callback action `%s` for #%s", action_id, callback_id)
     match action_id:
         case "getshwsgt":
             userRequest = DB.get_request_by_callback_data("getVoiceTextID", callback_id)
@@ -334,6 +336,7 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
                         result=None,
                     ),
                 )
+            logging.info("Sending text for #%s as of request #%s", callback_id, userRequest.requestID)
             return DefaultResponseModel(
                 error=None,
                 result=CallbackShowTextModelResponseModel(
@@ -345,6 +348,7 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
                     cacheTime=1800,
                 ),
             )
+    logging.warning("Unknown callback action `%s` for #%s", action_id, callback_id)
     raise ErrorCustomBruhher(
         statusCode=status.HTTP_400_BAD_REQUEST,
         response=DefaultResponseModel(
