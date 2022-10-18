@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Optional
 import pymongo
-from models import VoiceMessageTTSInlineModel
+from models import UserRequestContentDatabaseModel
+import logging
 
 
 class DB:
@@ -9,20 +10,28 @@ class DB:
         self.__db = self.__client["sebp"]
         self.__cll = self.__db["content"]
         self.__ull = self.__db["allowed"]
+        self.__post_init__()
 
-    def create_user_content(
-        self,
-        user_id: int,
-        requestID: str,
-        content: str,
-        tts: List[VoiceMessageTTSInlineModel],
-    ) -> None:
-        self.__cll.insert_one(
-            {"user_id": user_id, "requestID": requestID, "content": content, "tts": tts}
+    def __post_init__(self) -> None:
+        # Migrations for `callbackData` field
+        for doc in self.__cll.find({}):
+            if "callbackData" not in doc:
+                self.__cll.update_one(
+                    {"_id": doc["_id"]}, {"$set": {"callbackData": None}}
+                )
+                logging.debug(
+                    "Updated document #%s with new field `callbackData`", doc["_id"]
+                )
+                continue
+            logging.debug("Document #%s already has `callbackData` field", doc["_id"])
+
+    def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
+        self.__cll.insert_one(content.dict())
+
+    def get_request(self, requestID: str) -> Optional[UserRequestContentDatabaseModel]:
+        return UserRequestContentDatabaseModel(
+            **self.__cll.find_one({"requestID": requestID}) or {}
         )
-
-    def get_request(self, requestID: str) -> dict:
-        return self.__cll.find_one({"requestID": requestID})
 
     def get_user_allowed(self, user_id: int) -> bool:
         return self.__ull.find_one({"user_id": user_id, "allowed": True}) is not None

@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from pydantic import BaseModel, HttpUrl
 
 
@@ -20,12 +20,17 @@ class AdditionalDataModel(BaseModel):
     company: str
 
 
+class CallbackDataModel(BaseModel):
+    getVoiceTextID: str
+
+
 class VoiceMessageTTSInlineModel(BaseModel):
     url: HttpUrl
     title: str
     caption: Optional[str]
     voice_id: str
-    additionalData: Optional[AdditionalDataModel]
+    additionalData: AdditionalDataModel
+    callbackData: Optional[CallbackDataModel]
 
 
 class VoiceMessagesTTSResultModel(DefaultResultModel):
@@ -53,3 +58,10 @@ class UserAllowanceResultModel(DefaultResultModel):
 class TTSRequestBodyModel(BaseModel):
     user_id: int
     query: str
+
+
+class UserRequestContentDatabaseModel(BaseModel):
+    user_id: int
+    requestID: str
+    content: str
+    tts: List[VoiceMessageTTSInlineModel]
