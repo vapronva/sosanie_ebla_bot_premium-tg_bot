@@ -87,7 +87,7 @@ def answer_inline_query(_, inline_query):
                         [
                             InlineKeyboardButton(
                                 text="💬",
-                                callback_data=ttsv["callbackData"]["getVoiceTextID"],
+                                callback_data=f"getshwsgt-{ttsv['callbackData']['getVoiceTextID']}",
                             ),
                             InlineKeyboardButton(
                                 text="🤖",
@@ -111,7 +111,11 @@ def answer_inline_query(_, inline_query):
 
 @bot.on_callback_query()
 def answer_callback_query(_, callback_query):
-    callbackAction, requestIDPart, callbackID = callback_query.data.split("-")
+    try:
+        callbackAction, requestIDPart, callbackID = callback_query.data.split("-")
+    except ValueError as e:
+        logging.error(e)
+        return
     if any([callbackAction is None, requestIDPart is None, callbackID is None]):
         return
     if callbackAction == "getshwsgt":
