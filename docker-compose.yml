@@ -3,7 +3,7 @@ version: "3"
 
 services:
   db:
-    image: mongo:5.0-focal
+    image: mongo:5-focal
     restart: unless-stopped
     user: "1047"
     container_name: "database-sosania_ebla_bot_premium-vapronva-mongodb"
