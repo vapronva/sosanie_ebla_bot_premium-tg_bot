@@ -62,7 +62,7 @@ class DB:
     def update_token_usage(self, token: str) -> None:
         self.__tll.update_one(
             {"token": token},
-            {"$inc": {"used": 1}, "$set": {"last_used": datetime.now()}},
+            {"$inc": {"used": 1}, "$set": {"lastUsage": datetime.now()}},
         )
 
     def check_token_usage(self, token: str) -> bool:
