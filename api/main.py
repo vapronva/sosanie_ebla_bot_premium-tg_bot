@@ -461,7 +461,10 @@ def create_token(request: Request, token_str: str):
     status_code=status.HTTP_202_ACCEPTED,
 )
 def update_token(
-    request: Request, token_str: str, allowed: Optional[bool], maxUsage: Optional[int]
+    request: Request,
+    token_str: str,
+    allowed: Optional[bool] = None,
+    maxUsage: Optional[int] = None,
 ):
     if not check_proper_headers(request, True):
         raise ErrorCustomBruhher(
