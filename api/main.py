@@ -15,6 +15,9 @@ from models import (
     VoiceMessageTTSInlineModel,
     AdditionalDataModel,
     UserRequestContentDatabaseModel,
+    CallbackDataModel,
+    CallbackResponseShowTextModel,
+    CallbackShowTextModelResponseModel,
 )
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
 from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
@@ -84,7 +87,9 @@ def check_proper_user_agent(request: Request) -> bool:
 
 
 class ErrorCustomBruhher(Exception):
-    def __init__(self, response: DefaultResponseModel, statusCode: int) -> None:
+    def __init__(  # skipcq: PYL-W0231
+        self, response: DefaultResponseModel, statusCode: int
+    ) -> None:
         self.response = response
         self.statusCode = statusCode
 
@@ -146,7 +151,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                 result=None,
             ),
         )
-    userRequest = DB.get_request(request_id)
+    userRequest = DB.get_request(requestID=request_id)
     if not userRequest:
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_404_NOT_FOUND,
@@ -279,7 +284,9 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                     speakerName=voice[2],
                     speakerEmotion=voice[3],
                 ),
-                callbackData=None,
+                callbackData=CallbackDataModel(
+                    getVoiceTextID=f"{requestID[:12]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                ),
             )
         )
     DB.create_user_content(
@@ -296,6 +303,56 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
             requestID=requestID,
             cacheTime=10,
             data=ttsMessages,
+        ),
+    )
+
+
+@app.get("/callback/action/{action_id}/{callback_id}", status_code=status.HTTP_200_OK)
+def answer_callback_action_sucktion(request: Request, action_id: str, callback_id: str):
+    if not check_proper_user_agent(request):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_NUTS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+        )
+    match action_id:
+        case "getshwsgt":
+            userRequest = DB.get_request_by_callback_data("getVoiceTextID", callback_id)
+            if not userRequest:
+                raise ErrorCustomBruhher(
+                    statusCode=status.HTTP_404_NOT_FOUND,
+                    response=DefaultResponseModel(
+                        error=DefaultErrorModel(
+                            name="CALLBACK_NOT_FOUND",
+                            description="No such callback found in database",
+                        ),
+                        result=None,
+                    ),
+                )
+            return DefaultResponseModel(
+                error=None,
+                result=CallbackShowTextModelResponseModel(
+                    requestID=str(uuid.uuid4()),
+                    data=CallbackResponseShowTextModel(
+                        text=f'Original text: "{userRequest.content}"',
+                        show_alert=True,
+                    ),
+                    cacheTime=1800,
+                ),
+            )
+    raise ErrorCustomBruhher(
+        statusCode=status.HTTP_400_BAD_REQUEST,
+        response=DefaultResponseModel(
+            error=DefaultErrorModel(
+                name="CALLBACK_ACTION_INVALID",
+                description="No such callback action is available",
+            ),
+            result=None,
         ),
     )
 
@@ -320,6 +377,7 @@ def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
     try:
         DB.set_user_allowance(int(user_id), allowed_status)
     except Exception as e:
+        logging.error(e)
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
             response=DefaultResponseModel(

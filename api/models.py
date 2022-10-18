@@ -65,3 +65,12 @@ class UserRequestContentDatabaseModel(BaseModel):
     requestID: str
     content: str
     tts: List[VoiceMessageTTSInlineModel]
+
+
+class CallbackResponseShowTextModel(BaseModel):
+    text: str
+    show_alert: bool
+
+
+class CallbackShowTextModelResponseModel(DefaultResultModel):
+    data: CallbackResponseShowTextModel

@@ -13,17 +13,20 @@ class DB:
         self.__post_init__()
 
     def __post_init__(self) -> None:
-        # Migrations for `callbackData` field
         for doc in self.__cll.find({}):
             if "callbackData" not in doc:
                 self.__cll.update_one(
                     {"_id": doc["_id"]}, {"$set": {"callbackData": None}}
                 )
                 logging.debug(
-                    "Updated document #%s with new field `callbackData`", doc["_id"]
+                    "Databas migration for `callbackData` field: updated document #%s with new field `callbackData`",
+                    doc["_id"],
                 )
                 continue
-            logging.debug("Document #%s already has `callbackData` field", doc["_id"])
+            logging.debug(
+                "Databas migration for `callbackData` field: document #%s already has `callbackData` field",
+                doc["_id"],
+            )
 
     def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
         self.__cll.insert_one(content.dict())
@@ -31,6 +34,14 @@ class DB:
     def get_request(self, requestID: str) -> Optional[UserRequestContentDatabaseModel]:
         return UserRequestContentDatabaseModel(
             **self.__cll.find_one({"requestID": requestID}) or {}
+        )
+
+    def get_request_by_callback_data(
+        self, callback_field: str, callback_id: str
+    ) -> Optional[UserRequestContentDatabaseModel]:
+        return UserRequestContentDatabaseModel(
+            **self.__cll.find_one({f"tts.callbackData.{callback_field}": callback_id})
+            or {}
         )
 
     def get_user_allowed(self, user_id: int) -> bool:
