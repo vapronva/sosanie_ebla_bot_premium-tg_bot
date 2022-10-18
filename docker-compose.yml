@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     user: "1047"
     container_name: "database-sosania_ebla_bot_premium-vapronva-mongodb"
+    ports:
+      - 27122:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${DB_MONGODB_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGODB_PASSWORD}
