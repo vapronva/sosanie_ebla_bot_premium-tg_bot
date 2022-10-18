@@ -10,23 +10,6 @@ class DB:
         self.__db = self.__client["sebp"]
         self.__cll = self.__db["content"]
         self.__ull = self.__db["allowed"]
-        self.__post_init__()
-
-    def __post_init__(self) -> None:
-        for doc in self.__cll.find({}):
-            if "callbackData" not in doc:
-                self.__cll.update_one(
-                    {"_id": doc["_id"]}, {"$set": {"callbackData": None}}
-                )
-                logging.debug(
-                    "Databas migration for `callbackData` field: updated document #%s with new field `callbackData`",
-                    doc["_id"],
-                )
-                continue
-            logging.debug(
-                "Databas migration for `callbackData` field: document #%s already has `callbackData` field",
-                doc["_id"],
-            )
 
     def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
         self.__cll.insert_one(content.dict())
