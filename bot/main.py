@@ -3,6 +3,8 @@ from pyrogram.types import (
     InlineQueryResultVoice,
     InlineQueryResultArticle,
     InputTextMessageContent,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
 )
 from config import Config
 import logging
@@ -80,6 +82,20 @@ def answer_inline_query(_, inline_query):
                 title=ttsv["title"],
                 voice_url=ttsv["url"],
                 caption=ttsv["caption"],
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="💬",
+                                callback_data=ttsv["callbackData"]["getVoiceTextID"],
+                            ),
+                            InlineKeyboardButton(
+                                text="🤖",
+                                switch_inline_query_current_chat=inline_query.query,
+                            ),
+                        ]
+                    ]
+                ),
             ),
         )
     inline_query.answer(
@@ -91,6 +107,26 @@ def answer_inline_query(_, inline_query):
         len(RESULTING_VOICE_MESSAGES),
         USER_ID,
     )
+
+
+@bot.on_callback_query()
+def answer_callback_query(_, callback_query):
+    callbackAction, requestIDPart, callbackID = callback_query.data.split("-")
+    if any([callbackAction is None, requestIDPart is None, callbackID is None]):
+        return
+    if callbackAction == "getshwsgt":
+        response = requests.get(
+            url=f"https://{CONFIG.get_vprw_api_endpoint()}/callback/action/getshwsgt/{requestIDPart}-{callbackID}",
+            headers={"X-API-Token": CONFIG.get_vprw_api_key()},
+        ).json()
+        try:
+            callback_query.answer(
+                response["result"]["data"]["text"],
+                show_alert=response["result"]["data"]["show_alert"],
+            )
+        except KeyError as e:
+            logging.error(e)
+    return
 
 
 bot.run()
