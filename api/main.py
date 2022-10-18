@@ -336,7 +336,11 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
                         result=None,
                     ),
                 )
-            logging.info("Sending text for #%s as of request #%s", callback_id, userRequest.requestID)
+            logging.info(
+                "Sending text for #%s as of request #%s",
+                callback_id,
+                userRequest.requestID,
+            )
             return DefaultResponseModel(
                 error=None,
                 result=CallbackShowTextModelResponseModel(

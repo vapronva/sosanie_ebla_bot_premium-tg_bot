@@ -125,7 +125,9 @@ def answer_callback_query(_, callback_query):
         ).json()
         try:
             callback_query.answer(
-                response["result"]["data"]["text"],
+                (response["result"]["data"]["text"][:190] + "...")
+                if len(response["result"]["data"]["text"]) > 190
+                else response["result"]["data"]["text"],
                 show_alert=response["result"]["data"]["show_alert"],
             )
         except KeyError as e:

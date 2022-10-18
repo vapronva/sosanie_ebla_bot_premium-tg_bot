@@ -1,7 +1,6 @@
 from typing import List, Optional
 import pymongo
 from models import UserRequestContentDatabaseModel
-import logging
 
 
 class DB:
