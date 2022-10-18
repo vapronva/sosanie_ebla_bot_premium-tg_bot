@@ -285,7 +285,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                     speakerEmotion=voice[3],
                 ),
                 callbackData=CallbackDataModel(
-                    getVoiceTextID=f"{requestID[:12]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                    getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
                 ),
             )
         )
@@ -309,12 +309,12 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
 
 @app.get("/callback/action/{action_id}/{callback_id}", status_code=status.HTTP_200_OK)
 def answer_callback_action_sucktion(request: Request, action_id: str, callback_id: str):
-    if not check_proper_user_agent(request):
+    if not check_proper_headers(request):
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_403_FORBIDDEN,
             response=DefaultResponseModel(
                 error=DefaultErrorModel(
-                    name="FORBIDDEN_NUTS",
+                    name="FORBIDDEN_BALLS",
                     description="You are not authorized to access this resource",
                 ),
                 result=None,
