@@ -32,16 +32,23 @@ class DB:
         self.__cll.insert_one(content.dict())
 
     def get_request(self, requestID: str) -> Optional[UserRequestContentDatabaseModel]:
-        return UserRequestContentDatabaseModel(
-            **self.__cll.find_one({"requestID": requestID}) or {}
+        foundRequest = self.__cll.find_one({"requestID": requestID})
+        return (
+            UserRequestContentDatabaseModel(**foundRequest or {})
+            if foundRequest
+            else None
         )
 
     def get_request_by_callback_data(
         self, callback_field: str, callback_id: str
     ) -> Optional[UserRequestContentDatabaseModel]:
-        return UserRequestContentDatabaseModel(
-            **self.__cll.find_one({f"tts.callbackData.{callback_field}": callback_id})
-            or {}
+        foundRequest = self.__cll.find_one(
+            {f"tts.callbackData.{callback_field}": callback_id}
+        )
+        return (
+            UserRequestContentDatabaseModel(**foundRequest or {})
+            if foundRequest
+            else None
         )
 
     def get_user_allowed(self, user_id: int) -> bool:
