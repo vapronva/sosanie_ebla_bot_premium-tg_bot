@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from fastapi.responses import FileResponse
 from fastapi import FastAPI, status
 from pydantic import BaseModel, HttpUrl, parse_obj_as
@@ -18,6 +18,8 @@ from models import (
     CallbackDataModel,
     CallbackResponseShowTextModel,
     CallbackShowTextModelResponseModel,
+    DatabaseTokenObjectModel,
+    DatabaseTokenResponseOverallModel,
 )
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
 from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
@@ -69,13 +71,19 @@ AVAILABLE_VOICES = [
 app = FastAPI(
     debug=logging.DEBUG,  # type: ignore
     title="Sosanie Ebla Bot Premium API",
-    version="0.1.0",
+    version="0.3.0",
     contact=BaseModel(email=CONFIG.get_api_contact_email()).dict(),
 )
 
 
-def check_proper_headers(request: Request) -> bool:
+def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -> bool:
     if request.headers.get("X-API-Token") != CONFIG.get_vprw_api_key():
+        if (
+            DB.check_token_usage(request.headers.get("X-API-Key"))
+            and not checkOnlyMasterToken
+        ):
+            DB.update_token_usage(request.headers.get("X-API-Key"))
+            return True
         logging.warning("Wrong API key detected in request for %s", request.url)
         return False
     return True
@@ -141,17 +149,6 @@ def generate_selected_voice_tinkoff(additionalData: AdditionalDataModel) -> str:
 
 @app.get("/tts/voice/{request_id}/{voice_id}.ogg", status_code=status.HTTP_200_OK)
 def voice_message_server(request: Request, request_id: str, voice_id: str):
-    if not check_proper_user_agent(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_NUTS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
     userRequest = DB.get_request(requestID=request_id)
     if not userRequest:
         raise ErrorCustomBruhher(
@@ -368,7 +365,7 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
 @app.options(
     "/allowed",
     response_model=DefaultResponseModel,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_202_ACCEPTED,
 )
 def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
     if not check_proper_headers(request):
@@ -405,5 +402,98 @@ def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
             requestID=str(uuid.uuid4()),
             cacheTime=60,
             data=UserAllowedModel(allowed=USER_ALLOWANCE),
+        ),
+    )
+
+
+@app.put(
+    "/token",
+    response_model=DefaultResponseModel,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_token(request: Request, token_str: str):
+    if not check_proper_headers(request, True):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+        )
+    try:
+        DB.create_token(
+            DatabaseTokenObjectModel(
+                token=token_str,
+                totalUsage=0,
+                lastUsage=None,
+                allowed=True,
+                maxUsage=None,
+            )
+        )
+    except Exception as e:
+        logging.error(e)
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="DB_TOKEN_ERROR",
+                    description="An error occurred while creating token",
+                ),
+                result=None,
+            ),
+        )
+    return DefaultResponseModel(
+        error=None,
+        result=DatabaseTokenResponseOverallModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=60,
+            data=DB.get_token(token_str),
+        ),
+    )
+
+
+@app.options(
+    "/token",
+    response_model=DefaultResponseModel,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def update_token(
+    request: Request, token_str: str, allowed: Optional[bool], maxUsage: Optional[int]
+):
+    if not check_proper_headers(request, True):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+        )
+    try:
+        DB.update_token(token_str, "allowed", allowed) if allowed else None
+        DB.update_token(token_str, "maxUsage", maxUsage) if maxUsage else None
+    except Exception as e:
+        logging.error(e)
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="DB_TOKEN_ERROR",
+                    description="An error occurred while updating token",
+                ),
+                result=None,
+            ),
+        )
+    return DefaultResponseModel(
+        error=None,
+        result=DatabaseTokenResponseOverallModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=60,
+            data=DB.get_token(token_str),
         ),
     )

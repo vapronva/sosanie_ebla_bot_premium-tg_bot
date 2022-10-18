@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, NonNegativeInt
+from datetime import datetime
 
 
 class DefaultErrorModel(BaseModel):
@@ -74,3 +75,15 @@ class CallbackResponseShowTextModel(BaseModel):
 
 class CallbackShowTextModelResponseModel(DefaultResultModel):
     data: CallbackResponseShowTextModel
+
+
+class DatabaseTokenObjectModel(BaseModel):
+    token: str
+    totalUsage: NonNegativeInt
+    lastUsage: Optional[datetime]
+    allowed: bool
+    maxUsage: Optional[NonNegativeInt]
+
+
+class DatabaseTokenResponseOverallModel(DefaultResultModel):
+    data: Optional[DatabaseTokenObjectModel]

@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 import pymongo
-from models import UserRequestContentDatabaseModel
+from models import UserRequestContentDatabaseModel, DatabaseTokenObjectModel
+from datetime import datetime
 
 
 class DB:
@@ -9,6 +10,7 @@ class DB:
         self.__db = self.__client["sebp"]
         self.__cll = self.__db["content"]
         self.__ull = self.__db["allowed"]
+        self.__tll = self.__db["tokens"]
 
     def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
         self.__cll.insert_one(content.dict())
@@ -40,3 +42,33 @@ class DB:
         self.__ull.update_one(
             {"user_id": user_id}, {"$set": {"allowed": allowed}}, upsert=True
         )
+
+    def create_token(self, token: DatabaseTokenObjectModel) -> None:
+        self.__tll.insert_one(token.dict())
+
+    def get_token(self, token: str) -> Optional[DatabaseTokenObjectModel]:
+        foundToken = self.__tll.find_one({"token": token})
+        return DatabaseTokenObjectModel(**foundToken or {}) if foundToken else None
+
+    def update_token(
+        self, token: str, fieldName: str, newValue: Any
+    ) -> DatabaseTokenObjectModel:
+        return self.__tll.find_one_and_update(
+            {"token": token},
+            {"$set": {fieldName: newValue}},
+            return_document=pymongo.ReturnDocument.AFTER,
+        )
+
+    def update_token_usage(self, token: str) -> None:
+        self.__tll.update_one(
+            {"token": token},
+            {"$inc": {"used": 1}, "$set": {"last_used": datetime.now()}},
+        )
+
+    def check_token_usage(self, token: str) -> bool:
+        currentToken = self.get_token(token)
+        if not currentToken:
+            return False
+        if currentToken.maxUsage is None:
+            return True
+        return currentToken.totalUsage < currentToken.maxUsage
