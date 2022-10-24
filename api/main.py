@@ -5,6 +5,7 @@ from fastapi import FastAPI, status
 from pydantic import BaseModel, HttpUrl, parse_obj_as
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
 from models import (
     DefaultResponseModel,
     DefaultErrorModel,
@@ -66,6 +67,12 @@ AVAILABLE_VOICES = [
     ("yandex", "ru", "zahar", "neutral", "Захар (нейтральный)"),
     ("yandex", "ru", "zahar", "good", "Захар (радостный)"),
     ("yandex", "uz", "nigora", None, "Нигора (обычная)"),
+    ("sberbank", "ru", "nataly", None, "Наталья (обычная)"),
+    ("sberbank", "ru", "boris", None, "Борис (обычный)"),
+    ("sberbank", "ru", "marfa", None, "Марфа (обычная)"),
+    ("sberbank", "ru", "taras", None, "Тарас (обычный)"),
+    ("sberbank", "ru", "alexa", None, "Александра (обычная)"),
+    ("sberbank", "ru", "sergey", None, "Сергей (обычный)"),
 ]
 
 app = FastAPI(
@@ -222,6 +229,15 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                     result=None,
                 ),
             )
+    elif selectedVoice.additionalData.company == "sberbank":
+        try:
+            SberbankSaluteSpeechDemo.synthesize(
+                selectedVoice.additionalData.speakerName,
+                userRequest.content,
+                outputFile,
+            )
+        except Exception as e:
+            logging.error(e)
     if not outputFile.exists():
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_404_NOT_FOUND,
@@ -265,7 +281,15 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
         )
     ttsMessages: List[VoiceMessageTTSInlineModel] = []
     for voice in AVAILABLE_VOICES:
-        company_slug = "T" if voice[0] == "tinkoff" else "Y"
+        match voice[0]:
+            case "tinkoff":
+                company_slug = "T"
+            case "yandex":
+                company_slug = "Y"
+            case "sberbank":
+                company_slug = "S"
+            case _:
+                company_slug = "UNDEFINED"
         voice_id = str(uuid.uuid4())
         ttsMessages.append(
             VoiceMessageTTSInlineModel(
