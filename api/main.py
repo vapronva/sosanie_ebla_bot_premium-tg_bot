@@ -238,6 +238,16 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             )
         except Exception as e:
             logging.error(e)
+            raise ErrorCustomBruhher(
+                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
+                response=DefaultResponseModel(
+                    error=DefaultErrorModel(
+                        name="SBERBANL_TTS_ERROR",
+                        description="SberBank TTS service is unavailable at the moment",
+                    ),
+                    result=None,
+                ),
+            )
     if not outputFile.exists():
         raise ErrorCustomBruhher(
             statusCode=status.HTTP_404_NOT_FOUND,

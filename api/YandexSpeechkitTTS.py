@@ -71,11 +71,11 @@ class YandexTTS:
 
     def writeData(self, path: Path) -> None:
         with open(path, "wb") as f:  # skipcq: PTC-W6004
-            for data in self.__data:
+            for data in self.__data:  # type: ignore
                 f.write(data)
 
     def getData(self) -> bytes:
         bytes_data = b""
-        for data in self.__data:
+        for data in self.__data:  # type: ignore
             bytes_data += data
         return bytes_data
