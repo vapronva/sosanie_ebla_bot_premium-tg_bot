@@ -271,6 +271,68 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
     return FileResponse(outputFile.with_suffix(".ogg"))
 
 
+@app.get("/tts/voice/{request_id}/{voice_id}.wav", status_code=status.HTTP_200_OK)
+def voice_message_wav(
+    request: Request, request_id: str, voice_id: str, download: bool = False
+):
+    userRequest = DB.get_request(requestID=request_id)
+    if not userRequest:
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="REQUEST_NOT_FOUND",
+                    description="No such request found in database or it has expired",
+                ),
+                result=None,
+            ),
+        )
+    selectedVoice = next((x for x in userRequest.tts if x.voice_id == voice_id), None)
+    if not selectedVoice:
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="VOICE_NOT_FOUND",
+                    description="No such voice message found in the request",
+                ),
+                result=None,
+            ),
+        )
+    outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
+    if outputFile.exists():
+        if download:
+            return FileResponse(
+                outputFile,
+                media_type="audio/wav",
+                headers={
+                    "Content-Disposition": f"attachment, filename=sosanieeblabotpremium-{voice_id.replace('-', '')}.wav"
+                },
+            )
+        return FileResponse(outputFile)
+    if outputFile.with_suffix(".ogg").exists() and not outputFile.exists():
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="VOICE_IRRETRIEVABLE",
+                    description="Voice message is not available in .wav format",
+                ),
+                result=None,
+            ),
+        )
+    raise ErrorCustomBruhher(
+        statusCode=status.HTTP_404_NOT_FOUND,
+        response=DefaultResponseModel(
+            error=DefaultErrorModel(
+                name="FILE_NOT_FOUND",
+                description="No such file found in the storage",
+            ),
+            result=None,
+        ),
+    )
+
+
 @app.post(
     "/tts/request",
     response_model=DefaultResponseModel,
@@ -318,6 +380,10 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                 ),
                 callbackData=CallbackDataModel(
                     getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                    publicVoiceWavUrl=parse_obj_as(
+                        HttpUrl,
+                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav?download=true",
+                    ),
                 ),
             )
         )

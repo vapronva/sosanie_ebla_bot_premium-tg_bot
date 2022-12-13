@@ -23,6 +23,7 @@ class AdditionalDataModel(BaseModel):
 
 class CallbackDataModel(BaseModel):
     getVoiceTextID: str
+    publicVoiceWavUrl: HttpUrl | None = None
 
 
 class VoiceMessageTTSInlineModel(BaseModel):

@@ -1,8 +1,8 @@
-FROM python:3.10-alpine
+FROM python:3.11-alpine
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache ffmpeg=5.0.1-r1
+RUN apk add --no-cache ffmpeg=5.1.2-r1
 
 COPY requirements.txt ./
 

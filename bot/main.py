@@ -1,4 +1,4 @@
-from pyrogram import Client
+from pyrogram import Client  # type: ignore
 from pyrogram.types import (
     InlineQueryResultVoice,
     InlineQueryResultArticle,
@@ -88,6 +88,10 @@ def answer_inline_query(_, inline_query):
                             InlineKeyboardButton(
                                 text="💬",
                                 callback_data=f"getshwsgt-{ttsv['callbackData']['getVoiceTextID']}",
+                            ),
+                            InlineKeyboardButton(
+                                text="⬇️",
+                                url=f"{ttsv['callbackData']['publicVoiceWavUrl']}",
                             ),
                             InlineKeyboardButton(
                                 text="🤖",
