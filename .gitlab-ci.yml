@@ -14,7 +14,7 @@ include:
 
 docker-image-build-api:
   stage: build-image
-  image: docker:20-git
+  image: docker.io/docker:20-git
   script:
     - cd api
     - docker build -t $CI_REGISTRY_IMAGE/api:latest .
@@ -33,7 +33,7 @@ docker-image-build-api:
 
 docker-image-build-bot:
   stage: build-image
-  image: docker:20-git
+  image: docker.io/docker:20-git
   script:
     - cd bot
     - docker build -t $CI_REGISTRY_IMAGE/bot:latest .
@@ -62,13 +62,14 @@ container_scanning:
 
 deploy-job:
   stage: deploy
-  image: docker:20-git
+  image: docker.io/alpine-3.17
   environment:
     name: production
     url: https://api.sosanie-ebla-bot-premium.vapronva.pw
+  before_script:
+    - apk add --no-cache curl
   script:
-    - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' down
-    - docker-compose -f 'docker-compose.yml' --project-name 'boapdb-sosaeblabotprem-vapronva' up -d
+    - curl -X POST $PORTAINER_DEPLOYMENT_BHOC_URL
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
     exists:

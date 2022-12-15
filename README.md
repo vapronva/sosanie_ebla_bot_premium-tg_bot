@@ -35,17 +35,25 @@ It probably has not the prettiest logging you've ever seen.
 
 ##### Yandex
 
+##### SberBank
+
+##### NovelAI
+
 ### Host Yourself
 
 #### Docker
 
-With the provided `Dockerfile`s and `docker-compose.yml` (or prebuilt `amd64` as specified in `docker-compose.yml`), you can easily deploy the bot.
+With the provided `Dockerfile`s and `docker-compose.yml` (or prebuilt `amd64` images as specified in `docker-compose.yml`), you can easily deploy the bot.
 
-1. Clone the repository.
-2. `docker-compose up -d` with all the necessary environment variables set (see below).
-3. Enjoy!
+1. Clone the repository;
+2. Fill out the environment variables, as specified [below](#environment-variables) (requires paid and moderated API keys for several services);
+3. `docker compose up -d`;
+4. Enjoy!
 
 ### Use the Official Bot
+
+[**@sseblopremiumbot**](https://t.me/sseblopremiumbot) \
+Currently there are no limitations are applied to the bot (number of requests and so on), however manual addition to the bot's whitelist is required via contacting the contact information specified in the bot's profile.
 
 ## Internal Structure
 
@@ -64,6 +72,7 @@ With the provided `Dockerfile`s and `docker-compose.yml` (or prebuilt `amd64` as
 | `YANDEX_SPEECHKIT_APITOKEN` | Generated static main API token for a given Yandex.Cloud account |
 | `VPRW_API_KEY` | API key used for bot authentication and API communication |
 | `VPRW_API_ENDPOINT` | Endpoint value (FQDN) |
+| `SBERBANK_SALUTESPEECH_ENDPOINTAPI` | SberBank's SaluteSpeech API endpoint for TTS |
 | `API_CONTACT_EMAIL` | Contact e-mail displayed in the docs |
 | `DB_MONGODB_URI` | MongoDB URI for authentication |
 | `VOICEMESSAGES_PATH_VOLUME` | Host path for voice-messages storage |
