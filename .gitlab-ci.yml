@@ -62,7 +62,7 @@ container_scanning:
 
 deploy-job:
   stage: deploy
-  image: docker.io/alpine-3.17
+  image: docker.io/alpine:3.17
   environment:
     name: production
     url: https://api.sosanie-ebla-bot-premium.vapronva.pw
