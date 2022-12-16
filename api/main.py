@@ -216,14 +216,23 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ytts = SpeechKitTTS(
                 voice=selectedVoice.additionalData.speakerName,
                 speed=1.0,
-                audioFormat="lpcm",
+                audioFormat="oggopus",
                 sampleRateHertz=48000,
                 folderId=CONFIG.get_yandex_speechkit_folderid(),
                 emotion=selectedVoice.additionalData.speakerEmotion,
             )
             ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
             ytts.generate(userRequest.content)
-            ytts.writeData(outputFile)
+            ytts.writeData(outputFile.with_suffix(".ogg"))
+            ffmpy.FFmpeg(
+                global_options="-y -loglevel quiet",
+                inputs={str(outputFile.with_suffix(".ogg")): None},
+                outputs={
+                    outputFile.with_suffix(".wav")
+                    .absolute()
+                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 48000"
+                },
+            ).run()
         except Exception as e:
             logging.error(e)
             raise ErrorCustomBruhher(
@@ -294,15 +303,16 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                 result=None,
             ),
         )
-    ffmpy.FFmpeg(
-        global_options="-y -loglevel quiet",
-        inputs={str(outputFile): None},
-        outputs={
-            outputFile.with_suffix(".ogg")
-            .absolute()
-            .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
-        },
-    ).run()
+    if selectedVoice.additionalData.company in ["tinkoff", "vk", "sberbank"]:
+        ffmpy.FFmpeg(
+            global_options="-y -loglevel quiet",
+            inputs={str(outputFile): None},
+            outputs={
+                outputFile.with_suffix(".ogg")
+                .absolute()
+                .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
+            },
+        ).run()
     return FileResponse(outputFile.with_suffix(".ogg"))
 
 
