@@ -6,6 +6,8 @@ _REQUIRED_FIELDS = [
     "TINKOFF_VOICEKIT_ENDPOINTAPI",
     "YANDEX_SPEECHKIT_FOLDERID",
     "YANDEX_SPEECHKIT_APITOKEN",
+    "VK_CLOUDVOICE_ENDPOINTAPI",
+    "VK_CLOUDVOICE_SERVICETOKEN",
     "SBERBANK_SALUTESPEECH_ENDPOINTAPI",
     "VPRW_API_KEY",
     "VPRW_API_ENDPOINT",
@@ -44,6 +46,12 @@ class Config:
 
     def get_yandex_speechkit_apitoken(self) -> str:
         return self.__get_env_var("YANDEX_SPEECHKIT_APITOKEN")
+
+    def get_vk_cloudvoice_endpointapi(self) -> str:
+        return self.__get_env_var("VK_CLOUDVOICE_ENDPOINTAPI")
+
+    def get_vk_cloudvoice_servicetoken(self) -> str:
+        return self.__get_env_var("VK_CLOUDVOICE_SERVICETOKEN")
 
     def get_sberbank_salutespeech_endpointapi(self) -> str:
         return self.__get_env_var("SBERBANK_SALUTESPEECH_ENDPOINTAPI")

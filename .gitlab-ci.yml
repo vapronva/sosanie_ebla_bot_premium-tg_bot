@@ -59,25 +59,3 @@ container_scanning:
     CS_DISABLE_LANGUAGE_VULNERABILITY_SCAN: "false"
     CS_ANALYZER_IMAGE: "registry.gitlab.com/security-products/container-scanning/grype:5"
     SECURE_LOG_LEVEL: "debug"
-
-deploy-job:
-  stage: deploy
-  image: docker.io/alpine:3.17
-  environment:
-    name: production
-    url: https://api.sosanie-ebla-bot-premium.vapronva.pw
-  before_script:
-    - apk add --no-cache curl
-  script:
-    - curl -X POST $PORTAINER_DEPLOYMENT_BHOC_URL
-  rules:
-  - if: $CI_COMMIT_BRANCH == "main"
-    exists:
-    - docker-compose.yml
-    changes:
-    - docker-compose.yml
-    - api/Dockerfile
-    - bot/Dockerfile
-    - .gitlab-ci.yml
-    - "**/*.py"
-    - "**/*.txt"

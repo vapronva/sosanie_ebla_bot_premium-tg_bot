@@ -29,6 +29,8 @@ import logging
 import uuid
 from db import DB as DatabaseManager
 import ffmpy
+from VKCloudVoiceTTS import VKCloudVoiceTTS
+from VKCloudVoiceTTS import VCVoices as VKCloudVoiceVoices
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -67,6 +69,9 @@ AVAILABLE_VOICES = [
     ("yandex", "ru", "zahar", "neutral", "Захар (нейтральный)"),
     ("yandex", "ru", "zahar", "good", "Захар (радостный)"),
     ("yandex", "uz", "nigora", None, "Нигора (обычная)"),
+    ("vk", "ru", "katherine", None, "Катерина (обычная)"),
+    ("vk", "ru", "maria", None, "Мария (обычная)"),
+    ("vk", "ru", "pavel", None, "Павел (обычный)"),
     ("sberbank", "ru", "nataly", None, "Наталья (обычная)"),
     ("sberbank", "ru", "boris", None, "Борис (обычный)"),
     ("sberbank", "ru", "marfa", None, "Марфа (обычная)"),
@@ -81,6 +86,8 @@ app = FastAPI(
     version="0.3.0",
     contact=BaseModel(email=CONFIG.get_api_contact_email()).dict(),
 )
+
+VCV_TTS = VKCloudVoiceTTS(CONFIG.get_vk_cloudvoice_servicetoken())
 
 
 def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -> bool:
@@ -209,7 +216,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             ytts = SpeechKitTTS(
                 voice=selectedVoice.additionalData.speakerName,
                 speed=1.0,
-                audioFormat="oggopus",
+                audioFormat="lpcm",
                 sampleRateHertz=48000,
                 folderId=CONFIG.get_yandex_speechkit_folderid(),
                 emotion=selectedVoice.additionalData.speakerEmotion,
@@ -229,12 +236,40 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                     result=None,
                 ),
             )
+    elif selectedVoice.additionalData.company == "vk":
+        try:
+            VCV_TTS.save_audio(
+                text=userRequest.content,
+                voice=VKCloudVoiceVoices(selectedVoice.additionalData.speakerName),
+                path=outputFile.with_suffix(".mp3"),
+            )
+            ffmpy.FFmpeg(
+                global_options="-y -loglevel quiet",
+                inputs={str(outputFile.with_suffix(".mp3")): None},
+                outputs={
+                    outputFile.with_suffix(".wav")
+                    .absolute()
+                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 24000"
+                },
+            ).run()
+        except Exception as e:
+            logging.error(e)
+            raise ErrorCustomBruhher(
+                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
+                response=DefaultResponseModel(
+                    error=DefaultErrorModel(
+                        name="VKCV_TTS_ERROR",
+                        description="VK TTS service is unavailable at the moment",
+                    ),
+                    result=None,
+                ),
+            )
     elif selectedVoice.additionalData.company == "sberbank":
         try:
             SberbankSaluteSpeechDemo.synthesize(
-                selectedVoice.additionalData.speakerName,
-                userRequest.content,
-                outputFile,
+                selectedVoice=selectedVoice.additionalData.speakerName,
+                text=userRequest.content,
+                outputFile=outputFile,
             )
         except Exception as e:
             logging.error(e)
@@ -358,6 +393,8 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                 company_slug = "T"
             case "yandex":
                 company_slug = "Y"
+            case "vk":
+                company_slug = "V"
             case "sberbank":
                 company_slug = "S"
             case _:

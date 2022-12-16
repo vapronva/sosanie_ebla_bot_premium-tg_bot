@@ -4,7 +4,7 @@ import requests
 from enum import Enum
 
 
-class APIEndpoints(Enum):
+class APIEndpoints(str, Enum):
     Text2Speech: str = "https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize"
     IAM: str = "https://iam.api.cloud.yandex.net/iam/v1/tokens"
 
