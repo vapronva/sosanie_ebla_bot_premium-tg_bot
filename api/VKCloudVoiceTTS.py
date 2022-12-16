@@ -37,7 +37,7 @@ class VKCloudVoiceTTS:
         self,
         text: str,
         voice: VCVoices,
-        format: AvailableFormats = AvailableFormats.MP3,
+        outFormat: AvailableFormats = AvailableFormats.MP3,
         speed: float = 1.0,
     ) -> requests.Response:
         return requests.get(
@@ -46,7 +46,7 @@ class VKCloudVoiceTTS:
             params={
                 "text": text,
                 "model_name": voice.value,
-                "encoder": format.value,
+                "encoder": outFormat.value,
                 "tempo": str(speed),
             },
         )
@@ -55,18 +55,18 @@ class VKCloudVoiceTTS:
         self,
         text: str,
         voice: VCVoices,
-        format: AvailableFormats = AvailableFormats.MP3,
+        outFormat: AvailableFormats = AvailableFormats.MP3,
         speed: float = 1.0,
     ) -> bytes:
-        return self.__request(text, voice, format, speed).content
+        return self.__request(text, voice, outFormat, speed).content
 
     def save_audio(
         self,
         text: str,
         voice: VCVoices,
         path: Path,
-        format: AvailableFormats = AvailableFormats.MP3,
+        outFormat: AvailableFormats = AvailableFormats.MP3,
         speed: float = 1.0,
     ) -> None:
-        with open(path, "wb") as f:
-            f.write(self.get_audio(text, voice, format, speed))
+        with open(path, "wb") as f:  # skipcq: PTC-W6004
+            f.write(self.get_audio(text, voice, outFormat, speed))
