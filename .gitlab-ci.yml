@@ -10,7 +10,6 @@ include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/SAST-IaC.latest.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
-  - template: Security/Container-Scanning.gitlab-ci.yml
 
 docker-image-build-api:
   stage: build-image
@@ -29,7 +28,6 @@ docker-image-build-api:
         - "api/**/*.py"
         - api/requirements.txt
         - api/Dockerfile
-        - .gitlab-ci.yml
 
 docker-image-build-bot:
   stage: build-image
@@ -47,7 +45,6 @@ docker-image-build-bot:
         - "bot/*.py"
         - bot/requirements.txt
         - bot/Dockerfile
-        - .gitlab-ci.yml
 
 deploy-job:
   stage: deploy
@@ -70,6 +67,5 @@ deploy-job:
         - docker-compose.yml
         - api/Dockerfile
         - bot/Dockerfile
-        - .gitlab-ci.yml
         - "**/*.py"
         - "**/*.txt"
