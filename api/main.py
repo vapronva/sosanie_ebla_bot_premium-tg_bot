@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from fastapi import FastAPI, status
 from pydantic import BaseModel, HttpUrl, parse_obj_as
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
 from models import (
     DefaultResponseModel,
@@ -511,7 +511,7 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
                     getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
                     publicVoiceWavUrl=parse_obj_as(
                         HttpUrl,
-                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav?download=true",
+                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav",
                     ),
                 ),
             )
@@ -536,10 +536,17 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
             ),
         )
     _ = requests_get(url=ttsMessages[0].url)
-    return (
-        f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
-        if ttsMessages[0].callbackData is not None
-        else f"{ttsMessages[0].url}"
+    return Response(
+        str(
+            f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
+            if ttsMessages[0].callbackData is not None
+            else f"{ttsMessages[0].url}"
+        ),
+        status_code=status.HTTP_201_CREATED,
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f"attachment; filename=sosanieeblabotpremium-{ttsMessages[0].voice_id.replace('-', '')}.wav"
+        },
     )
 
 
