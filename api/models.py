@@ -62,6 +62,12 @@ class TTSRequestBodyModel(BaseModel):
     query: str
 
 
+class TTSRequestWithDirectWavBodyModel(BaseModel):
+    user_id: int
+    query: str
+    voice: AdditionalDataModel
+
+
 class UserRequestContentDatabaseModel(BaseModel):
     user_id: int
     requestID: str

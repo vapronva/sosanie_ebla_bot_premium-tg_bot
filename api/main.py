@@ -21,7 +21,9 @@ from models import (
     CallbackShowTextModelResponseModel,
     DatabaseTokenObjectModel,
     DatabaseTokenResponseOverallModel,
+    TTSRequestWithDirectWavBodyModel,
 )
+from requests import get as requests_get
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
 from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
 from config import Config
@@ -93,10 +95,10 @@ VCV_TTS = VKCloudVoiceTTS(CONFIG.get_vk_cloudvoice_servicetoken())
 def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -> bool:
     if request.headers.get("X-API-Token") != CONFIG.get_vprw_api_key():
         if (
-            DB.check_token_usage(request.headers.get("X-API-Key"))
+            DB.check_token_usage(request.headers.get("X-API-Key") or "")
             and not checkOnlyMasterToken
         ):
-            DB.update_token_usage(request.headers.get("X-API-Key"))
+            DB.update_token_usage(request.headers.get("X-API-Key") or "")
             return True
         logging.warning("Wrong API key detected in request for %s", request.url)
         return False
@@ -104,7 +106,7 @@ def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -
 
 
 def check_proper_user_agent(request: Request) -> bool:
-    if "TelegramBot" not in request.headers.get("User-Agent"):
+    if "TelegramBot" not in request.headers.get("User-Agent").__str__():
         return False
     return True
 
@@ -449,6 +451,95 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
             cacheTime=10,
             data=ttsMessages,
         ),
+    )
+
+
+@app.post(
+    "/tts/request/wav",
+    status_code=status.HTTP_201_CREATED,
+)
+def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
+    requestID = str(uuid.uuid4())
+    if not check_proper_headers(request):
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_403_FORBIDDEN,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="FORBIDDEN_BALLS",
+                    description="You are not authorized to access this resource",
+                ),
+                result=None,
+            ),
+        )
+    ttsMessages: List[VoiceMessageTTSInlineModel] = []
+    for voice in AVAILABLE_VOICES:
+        if (
+            not voice[0] == body.voice.company
+            or not voice[1] == body.voice.speakerLang
+            or not voice[2] == body.voice.speakerName
+            or not voice[3] == body.voice.speakerEmotion
+        ):
+            continue
+        match voice[0]:
+            case "tinkoff":
+                company_slug = "T"
+            case "yandex":
+                company_slug = "Y"
+            case "vk":
+                company_slug = "V"
+            case "sberbank":
+                company_slug = "S"
+            case _:
+                company_slug = "UNDEFINED"
+        voice_id = str(uuid.uuid4())
+        ttsMessages.append(
+            VoiceMessageTTSInlineModel(
+                url=parse_obj_as(
+                    HttpUrl,
+                    f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.ogg",
+                ),
+                title=f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
+                caption=None,
+                voice_id=voice_id,
+                additionalData=AdditionalDataModel(
+                    company=voice[0],
+                    speakerLang=voice[1],
+                    speakerName=voice[2],
+                    speakerEmotion=voice[3],
+                ),
+                callbackData=CallbackDataModel(
+                    getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                    publicVoiceWavUrl=parse_obj_as(
+                        HttpUrl,
+                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav?download=true",
+                    ),
+                ),
+            )
+        )
+    DB.create_user_content(
+        UserRequestContentDatabaseModel(
+            user_id=body.user_id,
+            content=body.query,
+            requestID=requestID,
+            tts=ttsMessages,
+        )
+    )
+    if len(ttsMessages) == 0:
+        raise ErrorCustomBruhher(
+            statusCode=status.HTTP_404_NOT_FOUND,
+            response=DefaultResponseModel(
+                error=DefaultErrorModel(
+                    name="VOICE_PROVIDER_NOT_FOUND",
+                    description="No such voice provider found in available TTS models",
+                ),
+                result=None,
+            ),
+        )
+    _ = requests_get(url=ttsMessages[0].url)
+    return (
+        f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
+        if ttsMessages[0].callbackData is not None
+        else f"{ttsMessages[0].url}"
     )
 
 
