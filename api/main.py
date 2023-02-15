@@ -347,6 +347,10 @@ def voice_message_wav(
             ),
         )
     outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
+    if not outputFile.exists():
+        _ = requests_get(
+            url=f"{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg"
+        )
     if outputFile.exists():
         if download:
             return FileResponse(
@@ -535,7 +539,6 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
                 result=None,
             ),
         )
-    _ = requests_get(url=ttsMessages[0].url)
     return Response(
         str(
             f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
