@@ -22,6 +22,8 @@ from models import (
     DatabaseTokenObjectModel,
     DatabaseTokenResponseOverallModel,
     TTSRequestWithDirectWavBodyModel,
+    VoiceListResponseModel,
+    SpokenVoiceModel,
 )
 from requests import get as requests_get
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
@@ -747,4 +749,24 @@ def update_token(
             cacheTime=60,
             data=DB.get_token(token_str),
         ),
+    )
+
+
+@app.get(
+    "/voices", response_model=VoiceListResponseModel, status_code=status.HTTP_200_OK
+)
+def get_voices():
+    return VoiceListResponseModel(
+        requestID=str(uuid.uuid4()),
+        cacheTime=60,
+        data=[
+            SpokenVoiceModel(
+                company=voice[0],
+                language=voice[1],
+                name=voice[2],
+                emotion=voice[3],
+                title=voice[4],
+            )
+            for voice in AVAILABLE_VOICES
+        ],
     )

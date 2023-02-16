@@ -15,10 +15,10 @@ class DefaultResultModel(BaseModel):
 
 
 class AdditionalDataModel(BaseModel):
+    company: str
     speakerLang: str
     speakerName: str
     speakerEmotion: Optional[str]
-    company: str
 
 
 class CallbackDataModel(BaseModel):
@@ -94,3 +94,15 @@ class DatabaseTokenObjectModel(BaseModel):
 
 class DatabaseTokenResponseOverallModel(DefaultResultModel):
     data: Optional[DatabaseTokenObjectModel]
+
+
+class SpokenVoiceModel(BaseModel):
+    company: str
+    language: str
+    name: str
+    emotion: Optional[str]
+    title: str
+
+
+class VoiceListResponseModel(DefaultResultModel):
+    data: list[SpokenVoiceModel]
