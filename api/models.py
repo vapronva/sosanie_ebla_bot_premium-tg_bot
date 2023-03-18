@@ -105,4 +105,8 @@ class SpokenVoiceModel(BaseModel):
 
 
 class VoiceListResponseModel(DefaultResultModel):
-    data: list[SpokenVoiceModel]
+    data: Union[
+        list[SpokenVoiceModel],
+        dict[str, list[SpokenVoiceModel]],
+        dict[str, dict[str, list[SpokenVoiceModel]]],
+    ]

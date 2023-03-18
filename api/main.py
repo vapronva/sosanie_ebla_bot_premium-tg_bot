@@ -755,18 +755,48 @@ def update_token(
 @app.get(
     "/voices", response_model=VoiceListResponseModel, status_code=status.HTTP_200_OK
 )
-def get_voices():
-    return VoiceListResponseModel(
-        requestID=str(uuid.uuid4()),
-        cacheTime=60,
-        data=[
-            SpokenVoiceModel(
-                company=voice[0],
-                language=voice[1],
-                name=voice[2],
-                emotion=voice[3],
-                title=voice[4],
+def get_voices(v2_format: bool = False, sort_by: str = "voice"):
+    if not v2_format and sort_by == "voice":
+        return VoiceListResponseModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=60,
+            data=[
+                SpokenVoiceModel(
+                    company=voice[0],
+                    language=voice[1],
+                    name=voice[2],
+                    emotion=voice[3],
+                    title=voice[4],
+                )
+                for voice in AVAILABLE_VOICES
+            ],
+        )
+    elif v2_format and sort_by == "voice":
+        voices = {}
+        for voice in AVAILABLE_VOICES:
+            if voice[2] not in voices:
+                voices[voice[2]] = []
+            voices[voice[2]].append(
+                SpokenVoiceModel(
+                    company=voice[0],
+                    language=voice[1],
+                    name=voice[2],
+                    emotion=voice[3],
+                    title=voice[4],
+                )
             )
-            for voice in AVAILABLE_VOICES
-        ],
+        return VoiceListResponseModel(
+            requestID=str(uuid.uuid4()),
+            cacheTime=60,
+            data=voices,
+    )
+    raise ErrorCustomBruhher(
+        statusCode=status.HTTP_400_BAD_REQUEST,
+        response=DefaultResponseModel(
+            error=DefaultErrorModel(
+                name="INVALID_VOICE_SORT",
+                description="Invalid voice sort parameter",
+            ),
+            result=None,
+        ),
     )
