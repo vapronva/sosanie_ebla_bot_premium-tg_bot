@@ -13,6 +13,8 @@ _REQUIRED_FIELDS = [
     "VPRW_API_ENDPOINT",
     "API_CONTACT_EMAIL",
     "DB_MONGODB_URI",
+    "SENTRY_DSN",
+    "DEPLOYMENT_ENVIRONMENT",
 ]
 
 
@@ -67,3 +69,13 @@ class Config:
 
     def get_db_mongodb_uri(self) -> str:
         return self.__get_env_var("DB_MONGODB_URI")
+
+    def get_sentry_dsn(self) -> str:
+        return self.__get_env_var("SENTRY_DSN")
+
+    def get_deployment_release(self) -> str:
+        with open("VERSION", "r") as f:
+            return f.read().strip()
+
+    def get_deployment_environment(self) -> str:
+        return self.__get_env_var("DEPLOYMENT_ENVIRONMENT")

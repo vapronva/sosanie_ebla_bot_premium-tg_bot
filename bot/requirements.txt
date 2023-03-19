@@ -1,3 +1,4 @@
-pyrogram==2.0.97
+pyrogram==2.0.102
 requests==2.28.2
 TgCrypto==1.2.5
+sentry-sdk==1.17.0

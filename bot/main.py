@@ -9,6 +9,8 @@ from pyrogram.types import (
 from config import Config
 import logging
 import requests
+import sentry_sdk
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +20,14 @@ logging.basicConfig(
 )
 
 CONFIG = Config()
+
+sentry_sdk.init(
+    dsn=CONFIG.get_sentry_dsn(),
+    release=CONFIG.get_deployment_release(),
+    environment=CONFIG.get_deployment_environment(),
+    traces_sample_rate=1.0,
+    enable_tracing=True,
+)
 
 bot = Client(
     "sosanie_ebla_bot_premium-1",

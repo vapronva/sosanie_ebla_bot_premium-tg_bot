@@ -33,8 +33,13 @@ services:
       VPRW_API_ENDPOINT: ${VPRW_API_ENDPOINT}
       API_CONTACT_EMAIL: ${API_CONTACT_EMAIL}
       DB_MONGODB_URI: ${DB_MONGODB_URI}
-      VIRTUAL_PORT: 8000
-      VIRTUAL_HOST: ${VPRW_API_ENDPOINT}
+      SENTRY_DSN: ${SENTRY_DSN_API}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.boapdb-sosaeblabotprem-vapronva-api.rule=Host(`api.sosanie-ebla-bot-premium.vapronva.pw`)"
+      - "traefik.http.routers.boapdb-sosaeblabotprem-vapronva-api.entrypoints=web"
+      - "traefik.http.services.boapdb-sosaeblabotprem-vapronva-api.loadbalancer.server.port=8000"
     volumes:
       - ${VOICEMESSAGES_PATH_VOLUME}:/usr/src/app/voice_messages_storage
   bot:
@@ -48,6 +53,8 @@ services:
       VPRW_API_KEY: ${VPRW_API_KEY}
       VPRW_API_ENDPOINT: ${VPRW_API_ENDPOINT}
       BOT_CONTACT_USERNAME: ${BOT_CONTACT_USERNAME}
+      SENTRY_DSN: ${SENTRY_DSN_BOT}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT}
 
 networks:
   default:
