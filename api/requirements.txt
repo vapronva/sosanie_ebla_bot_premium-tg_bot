@@ -1,11 +1,11 @@
 requests==2.28.2
 protobuf==4.22.1
-googleapis-common-protos==1.58.0
+googleapis-common-protos==1.59.0
 httpx[http2]==0.23.3
 fastapi==0.95.0
 uvicorn==0.21.1
 pymongo==4.3.3
 uuid==1.30
-grpcio==1.51.3
+grpcio==1.53.0
 ffmpy==0.3.0
-sentry-sdk==1.17.0
+sentry-sdk==1.19.1
