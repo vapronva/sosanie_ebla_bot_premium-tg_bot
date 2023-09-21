@@ -2,7 +2,6 @@ stages:
   - test
   - build-image
   - post-test
-  - deploy
 
 sast:
   stage: test
@@ -13,7 +12,7 @@ include:
 
 docker-image-build-api:
   stage: build-image
-  image: docker.io/library/docker:20-git
+  image: docker.io/library/docker:24-git
   script:
     - cd api
     - docker build -t $CI_REGISTRY_IMAGE/api:latest .
@@ -24,14 +23,14 @@ docker-image-build-api:
       exists:
         - api/Dockerfile
       changes:
-        - "api/*.py"
-        - "api/**/*.py"
+        - api/*.py
+        - api/**/*.py
         - api/requirements.txt
         - api/Dockerfile
 
 docker-image-build-bot:
   stage: build-image
-  image: docker.io/library/docker:20-git
+  image: docker.io/library/docker:24-git
   script:
     - cd bot
     - docker build -t $CI_REGISTRY_IMAGE/bot:latest .
@@ -42,30 +41,6 @@ docker-image-build-bot:
       exists:
         - bot/Dockerfile
       changes:
-        - "bot/*.py"
+        - bot/*.py
         - bot/requirements.txt
         - bot/Dockerfile
-
-deploy-job:
-  stage: deploy
-  image: docker.io/library/docker:20-git
-  tags:
-    - bho-core.node.fuvp.vprw
-  environment:
-    name: production
-    url: https://api.sosanie-ebla-bot-premium.vapronva.pw
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker-compose -f 'docker-compose.yml' --project-name 'api-bot-sosanieeblabotpremium-vapronva' pull
-    - docker-compose -f 'docker-compose.yml' --project-name 'api-bot-sosanieeblabotpremium-vapronva' down
-    - docker-compose -f 'docker-compose.yml' --project-name 'api-bot-sosanieeblabotpremium-vapronva' up -d
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      exists:
-        - docker-compose.yml
-      changes:
-        - docker-compose.yml
-        - api/Dockerfile
-        - bot/Dockerfile
-        - "**/*.py"
-        - "**/*.txt"

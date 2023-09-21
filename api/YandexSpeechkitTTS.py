@@ -1,7 +1,8 @@
+from enum import Enum
 from pathlib import Path
 from typing import Optional
+
 import requests
-from enum import Enum
 
 
 class APIEndpoints(str, Enum):
@@ -36,8 +37,9 @@ class YandexTTS:
         maxCharachters: int = 5000,
     ) -> None:
         self._maxCharachters = maxCharachters
-        if voice not in map(lambda d: d["name"], self.__voicesList):
-            raise TypeError("Invalid speaker: no such a speaker was found in a list.")
+        if voice not in (d["name"] for d in self.__voicesList):
+            msg = "Invalid speaker: no such a speaker was found in a list."
+            raise TypeError(msg)
         self._params = {
             "lang": next(  # skipcq: PTC-W0063
                 item for item in self.__voicesList if item["name"] == voice
@@ -57,8 +59,9 @@ class YandexTTS:
 
     def generate(self, text: str) -> None:
         if len(text) >= self._maxCharachters:
+            msg = f"Too many charchters: number of characters must be less than {self._maxCharachters}"
             raise ValueError(
-                f"Too many charchters: number of characters must be less than {self._maxCharachters}"
+                msg,
             )
         params = self._params.copy()
         params["text"] = text

@@ -1,6 +1,7 @@
-from pathlib import Path
-import requests
 import os
+from pathlib import Path
+
+import requests
 
 _SSP_API_ENDPOINT = os.environ.get(
     "SBERBANK_SALUTESPEECH_ENDPOINTAPI",

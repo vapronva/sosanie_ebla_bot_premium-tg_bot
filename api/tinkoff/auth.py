@@ -20,7 +20,7 @@ def generate_jwt(api_key, secret_key, payload, expiration_time=TEN_MINUTES_IN_SE
         + base64.urlsafe_b64encode(payload_bytes).strip(b"=")
     )
     signature = hmac.new(
-        base64.urlsafe_b64decode(secret_key), msg=data, digestmod="sha256"
+        base64.urlsafe_b64decode(secret_key), msg=data, digestmod="sha256",
     )
     jwt = data + b"." + base64.urlsafe_b64encode(signature.digest()).strip(b"=")
     return jwt.decode("utf-8")
@@ -29,6 +29,6 @@ def generate_jwt(api_key, secret_key, payload, expiration_time=TEN_MINUTES_IN_SE
 def authorization_metadata(api_key, secret_key, scope, finalType=list):
     auth_payload = {"iss": "test_issuer", "sub": "test_user", "aud": scope}
     metadata = [
-        ("authorization", "Bearer " + generate_jwt(api_key, secret_key, auth_payload))
+        ("authorization", "Bearer " + generate_jwt(api_key, secret_key, auth_payload)),
     ]
     return finalType(metadata)

@@ -20,12 +20,14 @@ class Config:
     def __check_env_vars():
         for field in _REQUIRED_FIELDS:
             if field not in os.environ:
-                raise ValueError(f"Environment variable {field} is not set")
+                msg = f"Environment variable {field} is not set"
+                raise ValueError(msg)
 
     @staticmethod
     def __get_env_var(name: str) -> str:
         if name not in os.environ:
-            raise ValueError(f"Environment variable {name} is not set")
+            msg = f"Environment variable {name} is not set"
+            raise ValueError(msg)
         return os.environ[name]
 
     def get_telegram_api_id(self) -> str:
@@ -50,7 +52,7 @@ class Config:
         return self.__get_env_var("SENTRY_DSN")
 
     def get_deployment_release(self) -> str:
-        with open("VERSION", "r") as f:
+        with open("VERSION") as f:
             return f.read().strip()
 
     def get_deployment_environment(self) -> str:

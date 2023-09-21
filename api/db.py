@@ -1,7 +1,8 @@
-from typing import Any, List, Optional
-import pymongo
-from models import UserRequestContentDatabaseModel, DatabaseTokenObjectModel
 from datetime import datetime
+from typing import Any, Optional
+
+import pymongo
+from models import DatabaseTokenObjectModel, UserRequestContentDatabaseModel
 
 
 class DB:
@@ -24,10 +25,10 @@ class DB:
         )
 
     def get_request_by_callback_data(
-        self, callback_field: str, callback_id: str
+        self, callback_field: str, callback_id: str,
     ) -> Optional[UserRequestContentDatabaseModel]:
         foundRequest = self.__cll.find_one(
-            {f"tts.callbackData.{callback_field}": callback_id}
+            {f"tts.callbackData.{callback_field}": callback_id},
         )
         return (
             UserRequestContentDatabaseModel(**foundRequest or {})
@@ -40,7 +41,7 @@ class DB:
 
     def set_user_allowance(self, user_id: int, allowed: bool) -> None:
         self.__ull.update_one(
-            {"user_id": user_id}, {"$set": {"allowed": allowed}}, upsert=True
+            {"user_id": user_id}, {"$set": {"allowed": allowed}}, upsert=True,
         )
 
     def create_token(self, token: DatabaseTokenObjectModel) -> None:
@@ -51,7 +52,7 @@ class DB:
         return DatabaseTokenObjectModel(**foundToken or {}) if foundToken else None
 
     def update_token(
-        self, token: str, fieldName: str, newValue: Any
+        self, token: str, fieldName: str, newValue: Any,
     ) -> DatabaseTokenObjectModel:
         return self.__tll.find_one_and_update(
             {"token": token},

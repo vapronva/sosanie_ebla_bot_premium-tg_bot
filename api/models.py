@@ -1,6 +1,7 @@
-from typing import List, Optional, Union
-from pydantic import BaseModel, HttpUrl, NonNegativeInt
 from datetime import datetime
+from typing import List, Optional, Union
+
+from pydantic import BaseModel, HttpUrl, NonNegativeInt
 
 
 class DefaultErrorModel(BaseModel):

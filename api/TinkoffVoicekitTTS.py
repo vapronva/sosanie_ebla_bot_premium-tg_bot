@@ -1,10 +1,11 @@
-from typing import Optional, Tuple
-from tinkoff.cloud.tts.v1 import tts_pb2_grpc, tts_pb2
-from tinkoff.auth import authorization_metadata
-import grpc
 import os
 import wave
 from pathlib import Path
+from typing import Optional, Tuple
+
+import grpc
+from tinkoff.auth import authorization_metadata
+from tinkoff.cloud.tts.v1 import tts_pb2, tts_pb2_grpc
 
 _VKC_API_ENDPOINT = os.environ.get("TINKOFF_VOICEKIT_ENDPOINTAPI", "api.tinkoff.ai:443")
 _VCK_API_KEY = os.environ["TINKOFF_VOICEKIT_APIKEY"]
@@ -39,7 +40,7 @@ def process_text_to_speech(
         f.setnchannels(1)
         f.setsampwidth(2)
         stub = tts_pb2_grpc.TextToSpeechStub(
-            grpc.secure_channel(endpoint_api, grpc.ssl_channel_credentials())
+            grpc.secure_channel(endpoint_api, grpc.ssl_channel_credentials()),
         )
         metadata = authorization_metadata(api_key, secret_key, "tinkoff.cloud.tts")
         responses = stub.StreamingSynthesize(request, metadata=metadata)

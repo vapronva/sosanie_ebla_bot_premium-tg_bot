@@ -1,45 +1,45 @@
+import logging
+import uuid
 from pathlib import Path
 from typing import List, Optional
-from fastapi.responses import FileResponse
+
+import ffmpy
+import sentry_sdk
+from config import Config
+from db import DB as DatabaseManager
 from fastapi import FastAPI, status
-from pydantic import BaseModel, HttpUrl, parse_obj_as
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
-from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
+from fastapi.responses import FileResponse
 from models import (
-    DefaultResponseModel,
-    DefaultErrorModel,
-    UserAllowanceResultModel,
-    UserAllowedModel,
-    TTSRequestBodyModel,
-    VoiceMessagesTTSResultModel,
-    VoiceMessageTTSInlineModel,
     AdditionalDataModel,
-    UserRequestContentDatabaseModel,
     CallbackDataModel,
     CallbackResponseShowTextModel,
     CallbackShowTextModelResponseModel,
     DatabaseTokenObjectModel,
     DatabaseTokenResponseOverallModel,
-    TTSRequestWithDirectWavBodyModel,
-    VoiceListResponseModel,
+    DefaultErrorModel,
+    DefaultResponseModel,
     SpokenVoiceModel,
+    TTSRequestBodyModel,
+    TTSRequestWithDirectWavBodyModel,
+    UserAllowanceResultModel,
+    UserAllowedModel,
+    UserRequestContentDatabaseModel,
+    VoiceListResponseModel,
+    VoiceMessagesTTSResultModel,
+    VoiceMessageTTSInlineModel,
 )
+from pydantic import BaseModel, HttpUrl, parse_obj_as
 from requests import get as requests_get
+from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
-from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
-from config import Config
-import logging
-import uuid
-import sentry_sdk
-from db import DB as DatabaseManager
-import ffmpy
-from VKCloudVoiceTTS import VKCloudVoiceTTS
 from VKCloudVoiceTTS import VCVoices as VKCloudVoiceVoices
-
+from VKCloudVoiceTTS import VKCloudVoiceTTS
+from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 CONFIG = Config()
@@ -125,7 +125,7 @@ def check_proper_user_agent(request: Request) -> bool:
 
 class ErrorCustomBruhher(Exception):
     def __init__(  # skipcq: PYL-W0231
-        self, response: DefaultResponseModel, statusCode: int
+        self, response: DefaultResponseModel, statusCode: int,
     ) -> None:
         self.response = response
         self.statusCode = statusCode
@@ -142,7 +142,7 @@ def read_root():
 
 
 @app.get(
-    "/allowed", response_model=DefaultResponseModel, status_code=status.HTTP_200_OK
+    "/allowed", response_model=DefaultResponseModel, status_code=status.HTTP_200_OK,
 )
 def is_user_allowed(request: Request, user_id: int):
     if not check_proper_headers(request):
@@ -209,7 +209,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             tinkoff_tts(
                 text=userRequest.content,
                 selected_voice=generate_selected_voice_tinkoff(
-                    selectedVoice.additionalData
+                    selectedVoice.additionalData,
                 ),
                 output_file=outputFile,
             )
@@ -244,7 +244,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                 outputs={
                     outputFile.with_suffix(".wav")
                     .absolute()
-                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 48000"
+                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 48000",
                 },
             ).run()
         except Exception as e:
@@ -272,7 +272,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
                 outputs={
                     outputFile.with_suffix(".wav")
                     .absolute()
-                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 24000"
+                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 24000",
                 },
             ).run()
         except Exception as e:
@@ -324,7 +324,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
             outputs={
                 outputFile.with_suffix(".ogg")
                 .absolute()
-                .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off"
+                .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off",
             },
         ).run()
     return FileResponse(outputFile.with_suffix(".ogg"))
@@ -332,7 +332,7 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
 
 @app.get("/tts/voice/{request_id}/{voice_id}.wav", status_code=status.HTTP_200_OK)
 def voice_message_wav(
-    request: Request, request_id: str, voice_id: str, download: bool = False
+    request: Request, request_id: str, voice_id: str, download: bool = False,
 ):
     userRequest = DB.get_request(requestID=request_id)
     if not userRequest:
@@ -361,7 +361,7 @@ def voice_message_wav(
     outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
     if not outputFile.exists():
         _ = requests_get(
-            url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg"
+            url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
         )
     if outputFile.exists():
         if download:
@@ -369,7 +369,7 @@ def voice_message_wav(
                 outputFile,
                 media_type="audio/wav",
                 headers={
-                    "Content-Disposition": f"attachment, filename=sosanieeblabotpremium-{voice_id.replace('-', '')}.wav"
+                    "Content-Disposition": f"attachment, filename=sosanieeblabotpremium-{voice_id.replace('-', '')}.wav",
                 },
             )
         return FileResponse(outputFile)
@@ -450,7 +450,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                         f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav?download=true",
                     ),
                 ),
-            )
+            ),
         )
     DB.create_user_content(
         UserRequestContentDatabaseModel(
@@ -458,7 +458,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
             content=body.query,
             requestID=requestID,
             tts=ttsMessages,
-        )
+        ),
     )
     return DefaultResponseModel(
         error=None,
@@ -490,10 +490,10 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
     ttsMessages: List[VoiceMessageTTSInlineModel] = []
     for voice in AVAILABLE_VOICES:
         if (
-            not voice[0] == body.voice.company
-            or not voice[1] == body.voice.speakerLang
-            or not voice[2] == body.voice.speakerName
-            or not voice[3] == body.voice.speakerEmotion
+            voice[0] != body.voice.company
+            or voice[1] != body.voice.speakerLang
+            or voice[2] != body.voice.speakerName
+            or voice[3] != body.voice.speakerEmotion
         ):
             continue
         match voice[0]:
@@ -530,7 +530,7 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
                         f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav",
                     ),
                 ),
-            )
+            ),
         )
     DB.create_user_content(
         UserRequestContentDatabaseModel(
@@ -538,7 +538,7 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
             content=body.query,
             requestID=requestID,
             tts=ttsMessages,
-        )
+        ),
     )
     if len(ttsMessages) == 0:
         raise ErrorCustomBruhher(
@@ -555,12 +555,12 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
         str(
             f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
             if ttsMessages[0].callbackData is not None
-            else f"{ttsMessages[0].url}"
+            else f"{ttsMessages[0].url}",
         ),
         status_code=status.HTTP_201_CREATED,
         media_type="text/plain",
         headers={
-            "Content-Disposition": f"attachment; filename=sosanieeblabotpremium-{ttsMessages[0].voice_id.replace('-', '')}.wav"
+            "Content-Disposition": f"attachment; filename=sosanieeblabotpremium-{ttsMessages[0].voice_id.replace('-', '')}.wav",
         },
     )
 
@@ -691,7 +691,7 @@ def create_token(request: Request, token_str: str):
                 lastUsage=None,
                 allowed=True,
                 maxUsage=None,
-            )
+            ),
         )
     except Exception as e:
         logging.error(e)
@@ -763,7 +763,7 @@ def update_token(
 
 
 @app.get(
-    "/voices", response_model=VoiceListResponseModel, status_code=status.HTTP_200_OK
+    "/voices", response_model=VoiceListResponseModel, status_code=status.HTTP_200_OK,
 )
 def get_voices(v2_format: bool = False, sort_by: str = "voice"):
     if not v2_format and sort_by == "voice":
@@ -793,7 +793,7 @@ def get_voices(v2_format: bool = False, sort_by: str = "voice"):
                     name=voice[2],
                     emotion=voice[3],
                     title=voice[4],
-                )
+                ),
             )
         return VoiceListResponseModel(
             requestID=str(uuid.uuid4()),

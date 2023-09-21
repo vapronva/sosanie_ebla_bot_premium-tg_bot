@@ -1,16 +1,16 @@
-from pyrogram import Client  # type: ignore
-from pyrogram.types import (
-    InlineQueryResultVoice,
-    InlineQueryResultArticle,
-    InputTextMessageContent,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-)
-from config import Config
 import logging
+
 import requests
 import sentry_sdk
-
+from config import Config
+from pyrogram import Client  # type: ignore
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InlineQueryResultArticle,
+    InlineQueryResultVoice,
+    InputTextMessageContent,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -107,8 +107,8 @@ def answer_inline_query(_, inline_query):
                                 text="🤖",
                                 switch_inline_query_current_chat=inline_query.query,
                             ),
-                        ]
-                    ]
+                        ],
+                    ],
                 ),
             ),
         )

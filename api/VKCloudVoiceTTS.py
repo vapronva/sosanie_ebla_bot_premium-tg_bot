@@ -1,7 +1,8 @@
-from pathlib import Path
-import requests
 import os
 from enum import Enum
+from pathlib import Path
+
+import requests
 
 _VCV_API_ENDPOINT = os.environ.get(
     "VK_CLOUDVOICE_ENDPOINTAPI",
