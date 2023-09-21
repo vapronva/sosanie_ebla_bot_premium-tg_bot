@@ -2,13 +2,11 @@ FROM docker.io/library/python:3.11-alpine
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache ffmpeg=5.1.3-r0
+RUN apk add --no-cache ffmpeg=6.0-r15
 
 COPY requirements.txt ./
 
 RUN pip install --no-cache-dir -r requirements.txt
-
-USER 1027
 
 COPY . .
 
