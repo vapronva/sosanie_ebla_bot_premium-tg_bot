@@ -144,6 +144,12 @@ speechkit.configure_credentials(
     ),
 )
 
+ENDPOINT_API = (
+    f"http://{CONFIG.get_vprw_api_endpoint()}"
+    if CONFIG.get_deployment_environment() == "development"
+    else f"https://{CONFIG.get_vprw_api_endpoint()}"
+)
+
 
 def check_proper_headers(
     request: Request,
@@ -304,7 +310,7 @@ def voice_message_wav(
     output_file = Path(f"./voice_messages_storage/{voice_id}.wav")
     if not output_file.exists():
         _ = requests_get(
-            url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
+            url=f"{ENDPOINT_API}/tts/voice/{request_id}/{voice_id}.ogg",
             timeout=25,
         )
     if output_file.exists():
@@ -347,7 +353,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
         voice_id = str(uuid.uuid4())
         tts_messages.append(
             VoiceMessageTTSInlineModel(
-                url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
+                url=f"{ENDPOINT_API}/tts/voice/{request_id}/{voice_id}.ogg",
                 title=f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
                 caption=None,
                 voice_id=voice_id,
@@ -359,7 +365,7 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                 ),
                 callbackData=CallbackDataModel(
                     getVoiceTextID=f"{request_id[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
-                    publicVoiceWavUrl=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.wav?download=true",
+                    publicVoiceWavUrl=f"{ENDPOINT_API}/tts/voice/{request_id}/{voice_id}.wav?download=true",
                 ),
             ),
         )
@@ -412,7 +418,7 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
         voice_id = str(uuid.uuid4())
         tts_messages.append(
             VoiceMessageTTSInlineModel(
-                url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
+                url=f"{ENDPOINT_API}/tts/voice/{request_id}/{voice_id}.ogg",
                 title=f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
                 caption=None,
                 voice_id=voice_id,
@@ -424,7 +430,7 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
                 ),
                 callbackData=CallbackDataModel(
                     getVoiceTextID=f"{request_id[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
-                    publicVoiceWavUrl=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.wav",
+                    publicVoiceWavUrl=f"{ENDPOINT_API}/tts/voice/{request_id}/{voice_id}.wav",
                 ),
             ),
         )

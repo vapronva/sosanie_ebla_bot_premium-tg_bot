@@ -36,6 +36,8 @@ bot = Client(
     bot_token=CONFIG.get_telegram_bot_token(),
 )
 
+ENDPOINT_API = f"http://{CONFIG.get_vprw_api_endpoint()}" if CONFIG.get_deployment_environment() == "development" else f"https://{CONFIG.get_vprw_api_endpoint()}"
+
 
 @bot.on_inline_query()
 def answer_inline_query(_, inline_query):
@@ -57,7 +59,7 @@ def answer_inline_query(_, inline_query):
     USER_ID = inline_query.from_user.id
     try:
         IS_ALLOWED = requests.get(
-            f"https://{CONFIG.get_vprw_api_endpoint()}/allowed",
+            f"{ENDPOINT_API}/allowed",
             timeout=25,
             params={"user_id": USER_ID},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
@@ -82,7 +84,7 @@ def answer_inline_query(_, inline_query):
         return
     QUERY_TEXT = inline_query.query
     response = requests.post(
-        url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/request",
+        url=f"{ENDPOINT_API}/tts/request",
         timeout=25,
         json={"user_id": USER_ID, "query": QUERY_TEXT},
         headers={"X-API-Token": CONFIG.get_vprw_api_key()},
@@ -135,7 +137,7 @@ def answer_callback_query(_, callback_query):
         return
     if callback_action == "getshwsgt":
         response = requests.get(
-            url=f"https://{CONFIG.get_vprw_api_endpoint()}/callback/action/getshwsgt/{request_id_part}-{callback_id}",
+            url=f"{ENDPOINT_API}/callback/action/getshwsgt/{request_id_part}-{callback_id}",
             timeout=25,
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()
