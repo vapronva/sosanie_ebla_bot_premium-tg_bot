@@ -5,18 +5,38 @@ from typing import List, Optional
 
 import ffmpy
 import sentry_sdk
+import speechkit
 from fastapi import FastAPI, status
 from fastapi.responses import FileResponse
-from pydantic import HttpUrl, parse_obj_as
 from requests import get as requests_get
 from sentry_sdk.integrations.pymongo import (
     PyMongoIntegration as SentryPyMongoIntegration,
 )
+from speechkit.tts.synthesizer import AudioEncoding as SpeechKitAudioEncoding
+from speechkit.tts.synthesizer import SynthesisConfig as SpeechKitSynthesisConfig
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from config import Config
 from db import DB as DatabaseManager
+from http_errors import (
+    ERROR_CALLBACK_ACTION_INVALID,
+    ERROR_CALLBACK_NOT_FOUND,
+    ERROR_DB_TOKEN_ERROR,
+    ERROR_DB_UPDATE_ERROR,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_FORBIDDEN_BALLS,
+    ERROR_INVALID_VOICE_SORT,
+    ERROR_REQUEST_NOT_FOUND,
+    ERROR_SBERBANK_TTS_ERROR,
+    ERROR_TINKOFF_TTS_ERROR,
+    ERROR_VKCV_TTS_ERROR,
+    ERROR_VOICE_IRRETRIEVABLE,
+    ERROR_VOICE_NOT_FOUND,
+    ERROR_VOICE_PROVIDER_NOT_FOUND,
+    ERROR_YANDEX_TTS_ERROR,
+    ErrorCustomBruhher,
+)
 from models import (
     AdditionalDataModel,
     CallbackDataModel,
@@ -24,7 +44,6 @@ from models import (
     CallbackShowTextModelResponseModel,
     DatabaseTokenObjectModel,
     DatabaseTokenResponseOverallModel,
-    DefaultErrorModel,
     DefaultResponseModel,
     SpokenVoiceModel,
     TTSRequestBodyModel,
@@ -40,7 +59,6 @@ from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
 from VKCloudVoiceTTS import VCVoices as VKCloudVoiceVoices
 from VKCloudVoiceTTS import VKCloudVoiceTTS
-from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -72,9 +90,10 @@ AVAILABLE_VOICES = [
     ("tinkoff", "ru", "dorofeev", "comedy", "Дорофеев (комедия)"),
     ("tinkoff", "ru", "dorofeev", "info", "Дорофеев (новости)"),
     ("tinkoff", "ru", "dorofeev", "tragedy", "Дорофеев (трагедия)"),
-    ("tinkoff", "ru", "maxim", None, "Максим (обычный)"),
     ("yandex", "de", "lea", None, "Леа (обычная)"),
     ("yandex", "en", "john", None, "Джонн (обычный)"),
+    ("yandex", "he", "naomi", "modern", "Наоми (современная)"),
+    ("yandex", "he", "naomi", "classic", "Наоми (классическая)"),
     ("yandex", "kk", "amira", None, "Амира (обычная)"),
     ("yandex", "kk", "madi", None, "Мади (обычный)"),
     ("yandex", "ru", "alena", "neutral", "Алёна (нейтральная)"),
@@ -90,6 +109,13 @@ AVAILABLE_VOICES = [
     ("yandex", "ru", "omazh", "evil", "Омаж (раздражённая)"),
     ("yandex", "ru", "zahar", "neutral", "Захар (нейтральный)"),
     ("yandex", "ru", "zahar", "good", "Захар (радостный)"),
+    ("yandex", "ru", "dasha", None, "Даша (обычная)"),
+    ("yandex", "ru", "julia", None, "Юлия (обычная)"),
+    ("yandex", "ru", "lera", None, "Лера (обычная)"),
+    ("yandex", "ru", "marina", None, "Марина (обычная)"),
+    ("yandex", "ru", "alexander", None, "Александр (обычный)"),
+    ("yandex", "ru", "kirill", None, "Кирилл (обычный)"),
+    ("yandex", "ru", "anton", None, "Антон (обычный)"),
     ("yandex", "uz", "nigora", None, "Нигора (обычная)"),
     ("vk", "ru", "katherine", None, "Катерина (обычная)"),
     ("vk", "ru", "maria", None, "Мария (обычная)"),
@@ -100,6 +126,7 @@ AVAILABLE_VOICES = [
     ("sberbank", "ru", "taras", None, "Тарас (обычный)"),
     ("sberbank", "ru", "alexa", None, "Александра (обычная)"),
     ("sberbank", "ru", "sergey", None, "Сергей (обычный)"),
+    ("sberbank", "en", "kira", None, "Кира (обычная)"),
 ]
 
 app = FastAPI(
@@ -111,12 +138,21 @@ app = FastAPI(
 
 VCV_TTS = VKCloudVoiceTTS(CONFIG.get_vk_cloudvoice_servicetoken())
 
+speechkit.configure_credentials(
+    yandex_credentials=speechkit.creds.YandexCredentials(
+        api_key=CONFIG.get_yandex_speechkit_apitoken(),
+    ),
+)
 
-def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -> bool:
+
+def check_proper_headers(
+    request: Request,
+    check_only_master_token: bool = False,
+) -> bool:
     if request.headers.get("X-API-Token") != CONFIG.get_vprw_api_key():
         if (
             DB.check_token_usage(request.headers.get("X-API-Key") or "")
-            and not checkOnlyMasterToken
+            and not check_only_master_token
         ):
             DB.update_token_usage(request.headers.get("X-API-Key") or "")
             return True
@@ -126,25 +162,14 @@ def check_proper_headers(request: Request, checkOnlyMasterToken: bool = False) -
 
 
 def check_proper_user_agent(request: Request) -> bool:
-    if "TelegramBot" not in request.headers.get("User-Agent").__str__():
-        return False
-    return True
-
-
-class ErrorCustomBruhher(Exception):
-    def __init__(  # skipcq: PYL-W0231
-        self,
-        response: DefaultResponseModel,
-        statusCode: int,
-    ) -> None:
-        self.response = response
-        self.statusCode = statusCode
+    return "TelegramBot" in request.headers.get("User-Agent").__str__()
 
 
 @app.exception_handler(ErrorCustomBruhher)
 def custom_error_bruhher(request: Request, exc: ErrorCustomBruhher) -> JSONResponse:
     return JSONResponse(
-        status_code=exc.statusCode, content=exc.response.model_dump(mode="json"),
+        status_code=exc.statusCode,
+        content=exc.response.model_dump(mode="json"),
     )
 
 
@@ -160,19 +185,8 @@ def read_root():
 )
 def is_user_allowed(request: Request, user_id: int):
     if not check_proper_headers(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
-    USER_ALLOWANCE = False
-    if DB.get_user_allowed(int(user_id)):
-        USER_ALLOWANCE = True
+        raise ERROR_FORBIDDEN_BALLS
+    USER_ALLOWANCE = bool(DB.get_user_allowed(user_id))
     return DefaultResponseModel(
         error=None,
         result=UserAllowanceResultModel(
@@ -183,165 +197,95 @@ def is_user_allowed(request: Request, user_id: int):
     )
 
 
-def generate_selected_voice_tinkoff(additionalData: AdditionalDataModel) -> str:
-    if additionalData.speakerEmotion:
-        return f"{additionalData.speakerName}:{additionalData.speakerEmotion}"
-    return additionalData.speakerName
+def generate_selected_voice_tinkoff(additional_data: AdditionalDataModel) -> str:
+    if additional_data.speakerEmotion:
+        return f"{additional_data.speakerName}:{additional_data.speakerEmotion}"
+    return additional_data.speakerName
 
 
 @app.get("/tts/voice/{request_id}/{voice_id}.ogg", status_code=status.HTTP_200_OK)
 def voice_message_server(request: Request, request_id: str, voice_id: str):
-    userRequest = DB.get_request(requestID=request_id)
-    if not userRequest:
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="REQUEST_NOT_FOUND",
-                    description="No such request found in database or it has expired",
-                ),
-                result=None,
-            ),
-        )
-    selectedVoice = next((x for x in userRequest.tts if x.voice_id == voice_id), None)
-    if not selectedVoice:
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="VOICE_NOT_FOUND",
-                    description="No such voice message found in the request",
-                ),
-                result=None,
-            ),
-        )
-    outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
-    if outputFile.with_suffix(".ogg").exists():
-        return FileResponse(outputFile.with_suffix(".ogg"))
-    if selectedVoice.additionalData.company == "tinkoff":
+    user_request = DB.get_request(request_id=request_id)
+    if not user_request:
+        raise ERROR_REQUEST_NOT_FOUND
+    selected_voice = next((x for x in user_request.tts if x.voice_id == voice_id), None)
+    if not selected_voice:
+        raise ERROR_VOICE_NOT_FOUND
+    output_file = Path(f"./voice_messages_storage/{voice_id}.wav")
+    if output_file.with_suffix(".ogg").exists():
+        return FileResponse(output_file.with_suffix(".ogg"))
+    if selected_voice.additionalData.company == "tinkoff":
         try:
             tinkoff_tts(
-                text=userRequest.content,
+                text=user_request.content,
                 selected_voice=generate_selected_voice_tinkoff(
-                    selectedVoice.additionalData,
+                    selected_voice.additionalData,
                 ),
-                output_file=outputFile,
+                output_file=output_file,
             )
         except Exception as e:
             logging.error(e)
-            raise ErrorCustomBruhher(
-                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
-                response=DefaultResponseModel(
-                    error=DefaultErrorModel(
-                        name="TINKOFF_TTS_ERROR",
-                        description="Tinkoff TTS service is unavailable at the moment",
-                    ),
-                    result=None,
-                ),
-            )
-    elif selectedVoice.additionalData.company == "yandex":
+            raise ERROR_TINKOFF_TTS_ERROR from None
+    elif selected_voice.additionalData.company == "yandex":
         try:
-            ytts = SpeechKitTTS(
-                voice=selectedVoice.additionalData.speakerName,
-                speed=1.0,
-                audioFormat="oggopus",
-                sampleRateHertz=48000,
-                folderId=CONFIG.get_yandex_speechkit_folderid(),
-                emotion=selectedVoice.additionalData.speakerEmotion,
+            model = speechkit.model_repository.synthesis_model()
+            model.voice = generate_selected_voice_tinkoff(selected_voice.additionalData)
+            model.sample_rate = 48000
+            result: bytes = model.synthesize(
+                text=user_request.content,
+                synthesis_config=SpeechKitSynthesisConfig(
+                    audio_encoding=SpeechKitAudioEncoding.WAV,
+                    voice=generate_selected_voice_tinkoff(
+                        selected_voice.additionalData,
+                    ),
+                ),
+                raw_format=True,
             )
-            ytts.IAMGen(CONFIG.get_yandex_speechkit_apitoken())
-            ytts.generate(userRequest.content)
-            ytts.writeData(outputFile.with_suffix(".ogg"))
-            ffmpy.FFmpeg(
-                global_options="-y -loglevel quiet",
-                inputs={str(outputFile.with_suffix(".ogg")): None},
-                outputs={
-                    outputFile.with_suffix(".wav")
-                    .absolute()
-                    .__str__(): "-acodec pcm_s16le -ac 1 -ar 48000",
-                },
-            ).run()
+            output_file.write_bytes(result)
         except Exception as e:
             logging.error(e)
-            raise ErrorCustomBruhher(
-                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
-                response=DefaultResponseModel(
-                    error=DefaultErrorModel(
-                        name="YANDEX_TTS_ERROR",
-                        description="Yandex TTS service is unavailable at the moment",
-                    ),
-                    result=None,
-                ),
-            )
-    elif selectedVoice.additionalData.company == "vk":
+            raise ERROR_YANDEX_TTS_ERROR from None
+    elif selected_voice.additionalData.company == "vk":
         try:
             VCV_TTS.save_audio(
-                text=userRequest.content,
-                voice=VKCloudVoiceVoices(selectedVoice.additionalData.speakerName),
-                path=outputFile.with_suffix(".mp3"),
+                text=user_request.content,
+                voice=VKCloudVoiceVoices(selected_voice.additionalData.speakerName),
+                path=output_file.with_suffix(".mp3"),
             )
             ffmpy.FFmpeg(
                 global_options="-y -loglevel quiet",
-                inputs={str(outputFile.with_suffix(".mp3")): None},
+                inputs={str(output_file.with_suffix(".mp3")): None},
                 outputs={
-                    outputFile.with_suffix(".wav")
+                    output_file.with_suffix(".wav")
                     .absolute()
                     .__str__(): "-acodec pcm_s16le -ac 1 -ar 24000",
                 },
             ).run()
         except Exception as e:
             logging.error(e)
-            raise ErrorCustomBruhher(
-                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
-                response=DefaultResponseModel(
-                    error=DefaultErrorModel(
-                        name="VKCV_TTS_ERROR",
-                        description="VK TTS service is unavailable at the moment",
-                    ),
-                    result=None,
-                ),
-            )
-    elif selectedVoice.additionalData.company == "sberbank":
+            raise ERROR_VKCV_TTS_ERROR from None
+    elif selected_voice.additionalData.company == "sberbank":
         try:
             SberbankSaluteSpeechDemo.synthesize(
-                selectedVoice=selectedVoice.additionalData.speakerName,
-                text=userRequest.content,
-                outputFile=outputFile,
+                selectedVoice=selected_voice.additionalData.speakerName,
+                text=user_request.content,
+                outputFile=output_file,
             )
         except Exception as e:
             logging.error(e)
-            raise ErrorCustomBruhher(
-                statusCode=status.HTTP_503_SERVICE_UNAVAILABLE,
-                response=DefaultResponseModel(
-                    error=DefaultErrorModel(
-                        name="SBERBANL_TTS_ERROR",
-                        description="SberBank TTS service is unavailable at the moment",
-                    ),
-                    result=None,
-                ),
-            )
-    if not outputFile.exists():
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="VOICE_PROVIDER_NOT_FOUND",
-                    description="No such voice provider found in available TTS models",
-                ),
-                result=None,
-            ),
-        )
-    if selectedVoice.additionalData.company in ["tinkoff", "vk", "sberbank"]:
-        ffmpy.FFmpeg(
-            global_options="-y -loglevel quiet",
-            inputs={str(outputFile): None},
-            outputs={
-                outputFile.with_suffix(".ogg")
-                .absolute()
-                .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off",
-            },
-        ).run()
-    return FileResponse(outputFile.with_suffix(".ogg"))
+            raise ERROR_SBERBANK_TTS_ERROR from None
+    if not output_file.exists():
+        raise ERROR_VOICE_PROVIDER_NOT_FOUND
+    ffmpy.FFmpeg(
+        global_options="-y -loglevel quiet",
+        inputs={str(output_file): None},
+        outputs={
+            output_file.with_suffix(".ogg")
+            .absolute()
+            .__str__(): "-acodec libopus -ac 1 -ar 48000 -b:a 128k -vbr off",
+        },
+    ).run()
+    return FileResponse(output_file.with_suffix(".ogg"))
 
 
 @app.get("/tts/voice/{request_id}/{voice_id}.wav", status_code=status.HTTP_200_OK)
@@ -351,66 +295,31 @@ def voice_message_wav(
     voice_id: str,
     download: bool = False,
 ):
-    userRequest = DB.get_request(requestID=request_id)
-    if not userRequest:
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="REQUEST_NOT_FOUND",
-                    description="No such request found in database or it has expired",
-                ),
-                result=None,
-            ),
-        )
-    selectedVoice = next((x for x in userRequest.tts if x.voice_id == voice_id), None)
-    if not selectedVoice:
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="VOICE_NOT_FOUND",
-                    description="No such voice message found in the request",
-                ),
-                result=None,
-            ),
-        )
-    outputFile = Path(f"./voice_messages_storage/{voice_id}.wav")
-    if not outputFile.exists():
+    user_request = DB.get_request(request_id=request_id)
+    if not user_request:
+        raise ERROR_REQUEST_NOT_FOUND
+    selected_voice = next((x for x in user_request.tts if x.voice_id == voice_id), None)
+    if not selected_voice:
+        raise ERROR_VOICE_NOT_FOUND
+    output_file = Path(f"./voice_messages_storage/{voice_id}.wav")
+    if not output_file.exists():
         _ = requests_get(
-            url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
+            url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
+            timeout=25,
         )
-    if outputFile.exists():
+    if output_file.exists():
         if download:
             return FileResponse(
-                outputFile,
+                output_file,
                 media_type="audio/wav",
                 headers={
                     "Content-Disposition": f"attachment, filename=sosanieeblabotpremium-{voice_id.replace('-', '')}.wav",
                 },
             )
-        return FileResponse(outputFile)
-    if outputFile.with_suffix(".ogg").exists() and not outputFile.exists():
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="VOICE_IRRETRIEVABLE",
-                    description="Voice message is not available in .wav format",
-                ),
-                result=None,
-            ),
-        )
-    raise ErrorCustomBruhher(
-        statusCode=status.HTTP_404_NOT_FOUND,
-        response=DefaultResponseModel(
-            error=DefaultErrorModel(
-                name="FILE_NOT_FOUND",
-                description="No such file found in the storage",
-            ),
-            result=None,
-        ),
-    )
+        return FileResponse(output_file)
+    if output_file.with_suffix(".ogg").exists() and not output_file.exists():
+        raise ERROR_VOICE_IRRETRIEVABLE
+    raise ERROR_FILE_NOT_FOUND
 
 
 @app.post(
@@ -419,19 +328,10 @@ def voice_message_wav(
     status_code=status.HTTP_201_CREATED,
 )
 def request_tts(request: Request, body: TTSRequestBodyModel):
-    requestID = str(uuid.uuid4())
+    request_id = str(uuid.uuid4())
     if not check_proper_headers(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
-    ttsMessages: List[VoiceMessageTTSInlineModel] = []
+        raise ERROR_FORBIDDEN_BALLS
+    tts_messages: List[VoiceMessageTTSInlineModel] = []
     for voice in AVAILABLE_VOICES:
         match voice[0]:
             case "tinkoff":
@@ -445,12 +345,9 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
             case _:
                 company_slug = "UNDEFINED"
         voice_id = str(uuid.uuid4())
-        ttsMessages.append(
+        tts_messages.append(
             VoiceMessageTTSInlineModel(
-                url=parse_obj_as(
-                    HttpUrl,
-                    f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.ogg",
-                ),
+                url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
                 title=f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
                 caption=None,
                 voice_id=voice_id,
@@ -461,11 +358,8 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
                     speakerEmotion=voice[3],
                 ),
                 callbackData=CallbackDataModel(
-                    getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
-                    publicVoiceWavUrl=parse_obj_as(
-                        HttpUrl,
-                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav?download=true",
-                    ),
+                    getVoiceTextID=f"{request_id[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                    publicVoiceWavUrl=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.wav?download=true",
                 ),
             ),
         )
@@ -473,16 +367,16 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
         UserRequestContentDatabaseModel(
             user_id=body.user_id,
             content=body.query,
-            requestID=requestID,
-            tts=ttsMessages,
+            requestID=request_id,
+            tts=tts_messages,
         ),
     )
     return DefaultResponseModel(
         error=None,
         result=VoiceMessagesTTSResultModel(
-            requestID=requestID,
+            requestID=request_id,
             cacheTime=10,
-            data=ttsMessages,
+            data=tts_messages,
         ),
     )
 
@@ -492,19 +386,10 @@ def request_tts(request: Request, body: TTSRequestBodyModel):
     status_code=status.HTTP_201_CREATED,
 )
 def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
-    requestID = str(uuid.uuid4())
+    request_id = str(uuid.uuid4())
     if not check_proper_headers(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
-    ttsMessages: List[VoiceMessageTTSInlineModel] = []
+        raise ERROR_FORBIDDEN_BALLS
+    tts_messages: List[VoiceMessageTTSInlineModel] = []
     for voice in AVAILABLE_VOICES:
         if (
             voice[0] != body.voice.company
@@ -525,12 +410,9 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
             case _:
                 company_slug = "UNDEFINED"
         voice_id = str(uuid.uuid4())
-        ttsMessages.append(
+        tts_messages.append(
             VoiceMessageTTSInlineModel(
-                url=parse_obj_as(
-                    HttpUrl,
-                    f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.ogg",
-                ),
+                url=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.ogg",
                 title=f"[{voice[1].upper()}] {voice[4]} [{company_slug}]",
                 caption=None,
                 voice_id=voice_id,
@@ -541,11 +423,8 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
                     speakerEmotion=voice[3],
                 ),
                 callbackData=CallbackDataModel(
-                    getVoiceTextID=f"{requestID[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
-                    publicVoiceWavUrl=parse_obj_as(
-                        HttpUrl,
-                        f"https://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{requestID}/{voice_id}.wav",
-                    ),
+                    getVoiceTextID=f"{request_id[-12:]}-{uuid.uuid4().__str__().replace('-', '_')}",
+                    publicVoiceWavUrl=f"http://{CONFIG.get_vprw_api_endpoint()}/tts/voice/{request_id}/{voice_id}.wav",
                 ),
             ),
         )
@@ -553,31 +432,22 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
         UserRequestContentDatabaseModel(
             user_id=body.user_id,
             content=body.query,
-            requestID=requestID,
-            tts=ttsMessages,
+            requestID=request_id,
+            tts=tts_messages,
         ),
     )
-    if len(ttsMessages) == 0:
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_404_NOT_FOUND,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="VOICE_PROVIDER_NOT_FOUND",
-                    description="No such voice provider found in available TTS models",
-                ),
-                result=None,
-            ),
-        )
+    if not tts_messages:
+        raise ERROR_VOICE_PROVIDER_NOT_FOUND
     return Response(
         str(
-            f"{ttsMessages[0].callbackData.publicVoiceWavUrl}"
-            if ttsMessages[0].callbackData is not None
-            else f"{ttsMessages[0].url}",
+            f"{tts_messages[0].callbackData.publicVoiceWavUrl}"
+            if tts_messages[0].callbackData is not None
+            else f"{tts_messages[0].url}",
         ),
         status_code=status.HTTP_201_CREATED,
         media_type="text/plain",
         headers={
-            "Content-Disposition": f"attachment; filename=sosanieeblabotpremium-{ttsMessages[0].voice_id.replace('-', '')}.wav",
+            "Content-Disposition": f"attachment; filename=sosanieeblabotpremium-{tts_messages[0].voice_id.replace('-', '')}.wav",
         },
     )
 
@@ -585,58 +455,34 @@ def request_tts_wav(request: Request, body: TTSRequestWithDirectWavBodyModel):
 @app.get("/callback/action/{action_id}/{callback_id}", status_code=status.HTTP_200_OK)
 def answer_callback_action_sucktion(request: Request, action_id: str, callback_id: str):
     if not check_proper_headers(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_FORBIDDEN_BALLS
     logging.info("Received callback action `%s` for #%s", action_id, callback_id)
     match action_id:
         case "getshwsgt":
-            userRequest = DB.get_request_by_callback_data("getVoiceTextID", callback_id)
-            if not userRequest:
-                raise ErrorCustomBruhher(
-                    statusCode=status.HTTP_404_NOT_FOUND,
-                    response=DefaultResponseModel(
-                        error=DefaultErrorModel(
-                            name="CALLBACK_NOT_FOUND",
-                            description="No such callback found in database",
-                        ),
-                        result=None,
-                    ),
-                )
+            user_request = DB.get_request_by_callback_data(
+                "getVoiceTextID",
+                callback_id,
+            )
+            if not user_request:
+                raise ERROR_CALLBACK_NOT_FOUND
             logging.info(
                 "Sending text for #%s as of request #%s",
                 callback_id,
-                userRequest.requestID,
+                user_request.requestID,
             )
             return DefaultResponseModel(
                 error=None,
                 result=CallbackShowTextModelResponseModel(
                     requestID=str(uuid.uuid4()),
                     data=CallbackResponseShowTextModel(
-                        text=f'Original text: "{userRequest.content}"',
+                        text=f'Original text: "{user_request.content}"',
                         show_alert=True,
                     ),
                     cacheTime=1800,
                 ),
             )
     logging.warning("Unknown callback action `%s` for #%s", action_id, callback_id)
-    raise ErrorCustomBruhher(
-        statusCode=status.HTTP_400_BAD_REQUEST,
-        response=DefaultResponseModel(
-            error=DefaultErrorModel(
-                name="CALLBACK_ACTION_INVALID",
-                description="No such callback action is available",
-            ),
-            result=None,
-        ),
-    )
+    raise ERROR_CALLBACK_ACTION_INVALID
 
 
 @app.options(
@@ -646,33 +492,13 @@ def answer_callback_action_sucktion(request: Request, action_id: str, callback_i
 )
 def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
     if not check_proper_headers(request):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_FORBIDDEN_BALLS
     try:
-        DB.set_user_allowance(int(user_id), allowed_status)
+        DB.set_user_allowance(user_id, allowed_status)
     except Exception as e:
         logging.error(e)
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="DB_UPDATE_ERROR",
-                    description="An error occurred while updating user's allowance status",
-                ),
-                result=None,
-            ),
-        )
-    USER_ALLOWANCE = False
-    if DB.get_user_allowed(int(user_id)):
-        USER_ALLOWANCE = True
+        raise ERROR_DB_UPDATE_ERROR from None
+    USER_ALLOWANCE = bool(DB.get_user_allowed(user_id))
     return DefaultResponseModel(
         error=None,
         result=UserAllowanceResultModel(
@@ -690,16 +516,7 @@ def change_user_allowance(request: Request, user_id: int, allowed_status: bool):
 )
 def create_token(request: Request, token_str: str):
     if not check_proper_headers(request, True):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_FORBIDDEN_BALLS
     try:
         DB.create_token(
             DatabaseTokenObjectModel(
@@ -712,16 +529,7 @@ def create_token(request: Request, token_str: str):
         )
     except Exception as e:
         logging.error(e)
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="DB_TOKEN_ERROR",
-                    description="An error occurred while creating token",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_DB_TOKEN_ERROR from None
     return DefaultResponseModel(
         error=None,
         result=DatabaseTokenResponseOverallModel(
@@ -741,34 +549,16 @@ def update_token(
     request: Request,
     token_str: str,
     allowed: Optional[bool] = None,
-    maxUsage: Optional[int] = None,
+    max_usage: Optional[int] = None,
 ):
     if not check_proper_headers(request, True):
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_403_FORBIDDEN,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="FORBIDDEN_BALLS",
-                    description="You are not authorized to access this resource",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_FORBIDDEN_BALLS
     try:
         DB.update_token(token_str, "allowed", allowed) if allowed else None
-        DB.update_token(token_str, "maxUsage", maxUsage) if maxUsage else None
+        DB.update_token(token_str, "maxUsage", max_usage) if max_usage else None
     except Exception as e:
         logging.error(e)
-        raise ErrorCustomBruhher(
-            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            response=DefaultResponseModel(
-                error=DefaultErrorModel(
-                    name="DB_TOKEN_ERROR",
-                    description="An error occurred while updating token",
-                ),
-                result=None,
-            ),
-        )
+        raise ERROR_DB_TOKEN_ERROR from None
     return DefaultResponseModel(
         error=None,
         result=DatabaseTokenResponseOverallModel(
@@ -819,13 +609,4 @@ def get_voices(v2_format: bool = False, sort_by: str = "voice"):
             cacheTime=60,
             data=voices,
         )
-    raise ErrorCustomBruhher(
-        statusCode=status.HTTP_400_BAD_REQUEST,
-        response=DefaultResponseModel(
-            error=DefaultErrorModel(
-                name="INVALID_VOICE_SORT",
-                description="Invalid voice sort parameter",
-            ),
-            result=None,
-        ),
-    )
+    raise ERROR_INVALID_VOICE_SORT

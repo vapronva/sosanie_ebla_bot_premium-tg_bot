@@ -17,11 +17,11 @@ class DB:
     def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
         self.__cll.insert_one(content.model_dump(mode="json"))
 
-    def get_request(self, requestID: str) -> Optional[UserRequestContentDatabaseModel]:
-        foundRequest = self.__cll.find_one({"requestID": requestID})
+    def get_request(self, request_id: str) -> Optional[UserRequestContentDatabaseModel]:
+        found_request = self.__cll.find_one({"requestID": request_id})
         return (
-            UserRequestContentDatabaseModel(**foundRequest or {})
-            if foundRequest
+            UserRequestContentDatabaseModel(**found_request or {})
+            if found_request
             else None
         )
 
@@ -30,12 +30,12 @@ class DB:
         callback_field: str,
         callback_id: str,
     ) -> Optional[UserRequestContentDatabaseModel]:
-        foundRequest = self.__cll.find_one(
+        found_request = self.__cll.find_one(
             {f"tts.callbackData.{callback_field}": callback_id},
         )
         return (
-            UserRequestContentDatabaseModel(**foundRequest or {})
-            if foundRequest
+            UserRequestContentDatabaseModel(**found_request or {})
+            if found_request
             else None
         )
 
@@ -53,18 +53,18 @@ class DB:
         self.__tll.insert_one(token.model_dump(mode="json"))
 
     def get_token(self, token: str) -> Optional[DatabaseTokenObjectModel]:
-        foundToken = self.__tll.find_one({"token": token})
-        return DatabaseTokenObjectModel(**foundToken or {}) if foundToken else None
+        found_token = self.__tll.find_one({"token": token})
+        return DatabaseTokenObjectModel(**found_token or {}) if found_token else None
 
     def update_token(
         self,
         token: str,
-        fieldName: str,
-        newValue: Any,
+        field_name: str,
+        new_value: Any,
     ) -> DatabaseTokenObjectModel:
         return self.__tll.find_one_and_update(
             {"token": token},
-            {"$set": {fieldName: newValue}},
+            {"$set": {field_name: new_value}},
             return_document=pymongo.ReturnDocument.AFTER,
         )
 
@@ -75,9 +75,11 @@ class DB:
         )
 
     def check_token_usage(self, token: str) -> bool:
-        currentToken = self.get_token(token)
-        if not currentToken:
+        if current_token := self.get_token(token):
+            return (
+                True
+                if current_token.maxUsage is None
+                else current_token.used < current_token.maxUsage
+            )
+        else:
             return False
-        if currentToken.maxUsage is None:
-            return True
-        return currentToken.used < currentToken.maxUsage
