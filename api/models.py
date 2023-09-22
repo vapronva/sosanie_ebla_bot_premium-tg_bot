@@ -87,10 +87,10 @@ class CallbackShowTextModelResponseModel(DefaultResultModel):
 
 class DatabaseTokenObjectModel(BaseModel):
     token: str
-    totalUsage: NonNegativeInt
     lastUsage: Optional[datetime]
     allowed: bool
     maxUsage: Optional[NonNegativeInt]
+    used: NonNegativeInt
 
 
 class DatabaseTokenResponseOverallModel(DefaultResultModel):

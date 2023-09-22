@@ -5,10 +5,18 @@ from typing import List, Optional
 
 import ffmpy
 import sentry_sdk
-from config import Config
-from db import DB as DatabaseManager
 from fastapi import FastAPI, status
 from fastapi.responses import FileResponse
+from pydantic import HttpUrl, parse_obj_as
+from requests import get as requests_get
+from sentry_sdk.integrations.pymongo import (
+    PyMongoIntegration as SentryPyMongoIntegration,
+)
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
+from config import Config
+from db import DB as DatabaseManager
 from models import (
     AdditionalDataModel,
     CallbackDataModel,
@@ -28,18 +36,15 @@ from models import (
     VoiceMessagesTTSResultModel,
     VoiceMessageTTSInlineModel,
 )
-from pydantic import BaseModel, HttpUrl, parse_obj_as
-from requests import get as requests_get
 from SberbankSalutespeechTTS import SberbankSaluteSpeechDemo
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
 from TinkoffVoicekitTTS import process_text_to_speech as tinkoff_tts
 from VKCloudVoiceTTS import VCVoices as VKCloudVoiceVoices
 from VKCloudVoiceTTS import VKCloudVoiceTTS
 from YandexSpeechkitTTS import YandexTTS as SpeechKitTTS
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 CONFIG = Config()
@@ -50,6 +55,9 @@ sentry_sdk.init(
     environment=CONFIG.get_deployment_environment(),
     traces_sample_rate=1.0,
     enable_tracing=True,
+    integrations=[
+        SentryPyMongoIntegration(),
+    ],
 )
 
 DB = DatabaseManager(CONFIG.get_db_mongodb_uri())
@@ -98,7 +106,7 @@ app = FastAPI(
     debug=logging.DEBUG,  # type: ignore
     title="Sosanie Ebla Bot Premium API",
     version="0.3.0",
-    contact=BaseModel(email=CONFIG.get_api_contact_email()).dict(),
+    contact={"email": CONFIG.get_api_contact_email()},
 )
 
 VCV_TTS = VKCloudVoiceTTS(CONFIG.get_vk_cloudvoice_servicetoken())
@@ -125,7 +133,9 @@ def check_proper_user_agent(request: Request) -> bool:
 
 class ErrorCustomBruhher(Exception):
     def __init__(  # skipcq: PYL-W0231
-        self, response: DefaultResponseModel, statusCode: int,
+        self,
+        response: DefaultResponseModel,
+        statusCode: int,
     ) -> None:
         self.response = response
         self.statusCode = statusCode
@@ -133,7 +143,9 @@ class ErrorCustomBruhher(Exception):
 
 @app.exception_handler(ErrorCustomBruhher)
 def custom_error_bruhher(request: Request, exc: ErrorCustomBruhher) -> JSONResponse:
-    return JSONResponse(status_code=exc.statusCode, content=exc.response.dict())
+    return JSONResponse(
+        status_code=exc.statusCode, content=exc.response.model_dump(mode="json"),
+    )
 
 
 @app.get("/", status_code=status.HTTP_200_OK)
@@ -142,7 +154,9 @@ def read_root():
 
 
 @app.get(
-    "/allowed", response_model=DefaultResponseModel, status_code=status.HTTP_200_OK,
+    "/allowed",
+    response_model=DefaultResponseModel,
+    status_code=status.HTTP_200_OK,
 )
 def is_user_allowed(request: Request, user_id: int):
     if not check_proper_headers(request):
@@ -332,7 +346,10 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
 
 @app.get("/tts/voice/{request_id}/{voice_id}.wav", status_code=status.HTTP_200_OK)
 def voice_message_wav(
-    request: Request, request_id: str, voice_id: str, download: bool = False,
+    request: Request,
+    request_id: str,
+    voice_id: str,
+    download: bool = False,
 ):
     userRequest = DB.get_request(requestID=request_id)
     if not userRequest:
@@ -687,10 +704,10 @@ def create_token(request: Request, token_str: str):
         DB.create_token(
             DatabaseTokenObjectModel(
                 token=token_str,
-                totalUsage=0,
                 lastUsage=None,
                 allowed=True,
                 maxUsage=None,
+                used=0,
             ),
         )
     except Exception as e:
@@ -763,7 +780,9 @@ def update_token(
 
 
 @app.get(
-    "/voices", response_model=VoiceListResponseModel, status_code=status.HTTP_200_OK,
+    "/voices",
+    response_model=VoiceListResponseModel,
+    status_code=status.HTTP_200_OK,
 )
 def get_voices(v2_format: bool = False, sort_by: str = "voice"):
     if not v2_format and sort_by == "voice":

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import pymongo
+
 from models import DatabaseTokenObjectModel, UserRequestContentDatabaseModel
 
 
@@ -14,7 +15,7 @@ class DB:
         self.__tll = self.__db["tokens"]
 
     def create_user_content(self, content: UserRequestContentDatabaseModel) -> None:
-        self.__cll.insert_one(content.dict())
+        self.__cll.insert_one(content.model_dump(mode="json"))
 
     def get_request(self, requestID: str) -> Optional[UserRequestContentDatabaseModel]:
         foundRequest = self.__cll.find_one({"requestID": requestID})
@@ -25,7 +26,9 @@ class DB:
         )
 
     def get_request_by_callback_data(
-        self, callback_field: str, callback_id: str,
+        self,
+        callback_field: str,
+        callback_id: str,
     ) -> Optional[UserRequestContentDatabaseModel]:
         foundRequest = self.__cll.find_one(
             {f"tts.callbackData.{callback_field}": callback_id},
@@ -41,18 +44,23 @@ class DB:
 
     def set_user_allowance(self, user_id: int, allowed: bool) -> None:
         self.__ull.update_one(
-            {"user_id": user_id}, {"$set": {"allowed": allowed}}, upsert=True,
+            {"user_id": user_id},
+            {"$set": {"allowed": allowed}},
+            upsert=True,
         )
 
     def create_token(self, token: DatabaseTokenObjectModel) -> None:
-        self.__tll.insert_one(token.dict())
+        self.__tll.insert_one(token.model_dump(mode="json"))
 
     def get_token(self, token: str) -> Optional[DatabaseTokenObjectModel]:
         foundToken = self.__tll.find_one({"token": token})
         return DatabaseTokenObjectModel(**foundToken or {}) if foundToken else None
 
     def update_token(
-        self, token: str, fieldName: str, newValue: Any,
+        self,
+        token: str,
+        fieldName: str,
+        newValue: Any,
     ) -> DatabaseTokenObjectModel:
         return self.__tll.find_one_and_update(
             {"token": token},
@@ -72,4 +80,4 @@ class DB:
             return False
         if currentToken.maxUsage is None:
             return True
-        return currentToken.totalUsage < currentToken.maxUsage
+        return currentToken.used < currentToken.maxUsage
