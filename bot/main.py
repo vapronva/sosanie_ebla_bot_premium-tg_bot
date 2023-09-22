@@ -46,9 +46,9 @@ def answer_inline_query(_, inline_query):
                     title="Sosanie Ebla Bot Premium",
                     description="введите текст для озвучивания",
                     input_message_content=InputTextMessageContent(
-                        "<b>Sosanie Ebla Bot Premium</b>\n\n<i>Semi-public text-to-speech bot aimed to provide new level of comfort to its users at creating incredible and funny voice messages with high-quality TTS voices.</i>\n\n<code>;;</code> <a href='https://vprw.ru/redirect/telegrambot/sseblopremiumbot/source-code'>source code</a>\n<code>;;</code> <a href='https://vprw.ru/redirect/telegrambot/sseblopremiumbot/author'>author</a>\n\n<b>Usage:</b>\n<code>-</code> enter your query\n<code>-</code> select the desired voice, emotion and provider company (<code>[T]</code> — Tinkoff VoiceKit; <code>[Y]</code> — Yandex SpeechKit; <code>[S]</code> — SberBank SaluteSpeech; <code>[V]</code> — VK / MailRu Cloud Voice) with a given language (<code>[RU]</code> — Russian; <code>[DE]</code> — German; <code>[EN]</code> — English (US); <code>[KK]</code> — Kazakh; <code>[UZ]</code> — Uzbek)\n<code>-</code> laugh <i>:)</i>",
+                        "<b>Sosanie Ebla Bot Premium</b>\n\n<i>Semi-public text-to-speech bot aimed to provide new level of comfort to its users at creating incredible and funny voice messages with high-quality TTS voices.</i>\n\n<code>;;</code> <a href='https://vprw.ru/redirect/telegrambot/sseblopremiumbot/source-code'>source code</a>\n<code>;;</code> <a href='https://vprw.ru/redirect/telegrambot/sseblopremiumbot/author'>author</a>\n\n<b>Usage:</b>\n<code>-</code> enter your query\n<code>-</code> select the desired voice, emotion and provider company (<code>[T]</code> — Tinkoff VoiceKit; <code>[Y]</code> — Yandex SpeechKit; <code>[S]</code> — SberBank SaluteSpeech; <code>[V]</code> — VK / MailRu Cloud Voice) with a given language (<code>[RU]</code> — Russian; <code>[DE]</code> — German; <code>[EN]</code> — English (US); <code>[KK]</code> — Kazakh; <code>[UZ]</code> — Uzbek); <code>[HE]</code> — Hebrew\n<code>-</code> laugh <i>:)</i>",
                     ),
-                    thumb_url="https://gitlab.vapronva.pw/vapronva/sosanie_ebla_bot_premium-tg_bot/-/raw/main/_assets/botpic@2x.png",
+                    thumb_url="https://gl.vprw.ru/sosanie-ebla-bot/sseblopremiumbot/-/raw/main/_assets/botpic@2x.png",
                 ),
             ],
             cache_time=600,
@@ -58,6 +58,7 @@ def answer_inline_query(_, inline_query):
     try:
         IS_ALLOWED = requests.get(
             f"https://{CONFIG.get_vprw_api_endpoint()}/allowed",
+            timeout=25,
             params={"user_id": USER_ID},
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()["result"]["data"]["allowed"]
@@ -65,7 +66,7 @@ def answer_inline_query(_, inline_query):
         logging.error(e)
         IS_ALLOWED = False
     logging.info("User %s is allowed to perform TTS: %s", USER_ID, IS_ALLOWED)
-    if IS_ALLOWED is False:
+    if not IS_ALLOWED:
         inline_query.answer(
             results=[
                 InlineQueryResultArticle(
@@ -82,36 +83,36 @@ def answer_inline_query(_, inline_query):
     QUERY_TEXT = inline_query.query
     response = requests.post(
         url=f"https://{CONFIG.get_vprw_api_endpoint()}/tts/request",
+        timeout=25,
         json={"user_id": USER_ID, "query": QUERY_TEXT},
         headers={"X-API-Token": CONFIG.get_vprw_api_key()},
     ).json()
-    RESULTING_VOICE_MESSAGES = []
-    for ttsv in response["result"]["data"]:
-        RESULTING_VOICE_MESSAGES.append(
-            InlineQueryResultVoice(
-                title=ttsv["title"],
-                voice_url=ttsv["url"],
-                caption=ttsv["caption"],
-                reply_markup=InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [
-                            InlineKeyboardButton(
-                                text="💬",
-                                callback_data=f"getshwsgt-{ttsv['callbackData']['getVoiceTextID']}",
-                            ),
-                            InlineKeyboardButton(
-                                text="⬇️",
-                                url=f"{ttsv['callbackData']['publicVoiceWavUrl']}",
-                            ),
-                            InlineKeyboardButton(
-                                text="🤖",
-                                switch_inline_query_current_chat=inline_query.query,
-                            ),
-                        ],
+    RESULTING_VOICE_MESSAGES = [
+        InlineQueryResultVoice(
+            title=ttsv["title"],
+            voice_url=ttsv["url"],
+            caption=ttsv["caption"],
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="💬",
+                            callback_data=f"getshwsgt-{ttsv['callbackData']['getVoiceTextID']}",
+                        ),
+                        InlineKeyboardButton(
+                            text="⬇️",
+                            url=f"{ttsv['callbackData']['publicVoiceWavUrl']}",
+                        ),
+                        InlineKeyboardButton(
+                            text="🤖",
+                            switch_inline_query_current_chat=inline_query.query,
+                        ),
                     ],
-                ),
+                ],
             ),
         )
+        for ttsv in response["result"]["data"]
+    ]
     inline_query.answer(
         results=RESULTING_VOICE_MESSAGES,
         cache_time=response["result"]["cacheTime"],
@@ -126,15 +127,16 @@ def answer_inline_query(_, inline_query):
 @bot.on_callback_query()
 def answer_callback_query(_, callback_query):
     try:
-        callbackAction, requestIDPart, callbackID = callback_query.data.split("-")
+        callback_action, request_id_part, callback_id = callback_query.data.split("-")
     except ValueError as e:
         logging.error(e)
         return
-    if any([callbackAction is None, requestIDPart is None, callbackID is None]):
+    if any([callback_action is None, request_id_part is None, callback_id is None]):
         return
-    if callbackAction == "getshwsgt":
+    if callback_action == "getshwsgt":
         response = requests.get(
-            url=f"https://{CONFIG.get_vprw_api_endpoint()}/callback/action/getshwsgt/{requestIDPart}-{callbackID}",
+            url=f"https://{CONFIG.get_vprw_api_endpoint()}/callback/action/getshwsgt/{request_id_part}-{callback_id}",
+            timeout=25,
             headers={"X-API-Token": CONFIG.get_vprw_api_key()},
         ).json()
         try:
@@ -146,7 +148,6 @@ def answer_callback_query(_, callback_query):
             )
         except KeyError as e:
             logging.error(e)
-    return
 
 
 bot.run()
