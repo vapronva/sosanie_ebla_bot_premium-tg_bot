@@ -13,7 +13,9 @@ from sentry_sdk.integrations.pymongo import (
     PyMongoIntegration as SentryPyMongoIntegration,
 )
 from speechkit.tts.synthesizer import AudioEncoding as SpeechKitAudioEncoding
-from speechkit.tts.synthesizer import SynthesisConfig as SpeechKitSynthesisConfig
+from speechkit.tts.yandex.config import (
+    YandexSynthesisConfig as SpeechKitSynthesisConfig,
+)
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -235,15 +237,16 @@ def voice_message_server(request: Request, request_id: str, voice_id: str):
     elif selected_voice.additionalData.company == "yandex":
         try:
             model = speechkit.model_repository.synthesis_model()
-            model.voice = generate_selected_voice_tinkoff(selected_voice.additionalData)
+            model.voice = selected_voice.additionalData.speakerName
             model.sample_rate = 48000
             result: bytes = model.synthesize(
                 text=user_request.content,
                 synthesis_config=SpeechKitSynthesisConfig(
                     audio_encoding=SpeechKitAudioEncoding.WAV,
-                    voice=generate_selected_voice_tinkoff(
-                        selected_voice.additionalData,
-                    ),
+                    voice=selected_voice.additionalData.speakerName,
+                    role=selected_voice.additionalData.speakerEmotion,
+                    sample_rate=48000,
+                    unsafe_mode=True,
                 ),
                 raw_format=True,
             )
